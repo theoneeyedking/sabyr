@@ -1,0 +1,41 @@
+# Sabyr: одна команда поднимает БД и backend.
+#   docker compose up -d --build
+# Реестр Fabric поднимается скриптом ledger/network/up.sh (см. `make demo`), шлюз реестра —
+# профилем `ledger`; своя LLM — профилем `own-llm`.
+name: sabyr
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sabyr}
+      POSTGRES_USER: ${POSTGRES_USER:-sabyr}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?задайте POSTGRES_PASSWORD в .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sabyr} -d ${POSTGRES_DB:-sabyr}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "5432:5432"
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pgdata:
