@@ -38,3 +38,9 @@ describe('риск', () => {
     expect(firstName(undefined)).toBe('');
   });
 });
+
+test('идентификаторы организаций Fabric превращаются в названия банков', () => {
+  expect(bankLabel('Org1MSP')).toBe('Банк А');
+  expect(bankLabel('Org2MSP')).toBe('Банк Б');
+  expect(flaggingBanks({ status: 'ok', flagged: true, account_hash: 'x', flags: [{ bankId: 'Org1MSP' }] } as never)).toEqual(['Банк А']);
+});
