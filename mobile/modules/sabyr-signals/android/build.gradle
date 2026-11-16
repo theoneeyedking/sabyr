@@ -1,0 +1,20 @@
+// Локальный Expo-модуль Sabyr: сигналы устройства (звонок, демонстрация экрана).
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'kz.sabyr.signals'
+version = '1.0.0'
+
+expoModule {
+  canBePublished false
+}
+
+android {
+  namespace "expo.modules.sabyrsignals"
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "Sabyr",
+    "slug": "sabyr",
+    "scheme": "sabyr",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "kz.sabyr.mobile"
+    },
+    "android": {
+      "package": "kz.sabyr.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#12355B",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.READ_PHONE_STATE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      "expo-dev-client"
+    ]
+  }
+}
