@@ -1,3 +1,4 @@
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import serializers
 from rest_framework.decorators import api_view
@@ -72,11 +73,11 @@ def incoming(request):
     return Response({"items": [request_json(r, lang) for r in qs]})
 
 
-@extend_schema(summary="Моё доверенное лицо", tags=["trusted"], methods=["GET"], responses=serializers.DictField())
+@extend_schema(summary="Моё доверенное лицо", tags=["trusted"], methods=["GET"], responses={200: OpenApiTypes.OBJECT})
 @extend_schema(summary="Привязать доверенное лицо по номеру телефона", tags=["trusted"], methods=["PUT"],
                request=inline_serializer("TrustedContactIn", {"phone": serializers.CharField(),
                                                              "relation": serializers.CharField(required=False)}),
-               responses=serializers.DictField())
+               responses={200: OpenApiTypes.OBJECT})
 @extend_schema(summary="Отвязать доверенное лицо", tags=["trusted"], methods=["DELETE"], responses={204: None})
 @api_view(["GET", "PUT", "DELETE"])
 def contact(request):
