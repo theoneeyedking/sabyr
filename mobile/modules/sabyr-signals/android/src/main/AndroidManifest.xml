@@ -1,0 +1,4 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Необязательное разрешение: без него звонок определяется только по режиму аудио (AudioManager). -->
+  <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+</manifest>
