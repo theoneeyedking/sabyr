@@ -60,6 +60,7 @@ def test_full_demo_scenario(gulnara, daniyar, aidos, ledger):
                    format="json")
     body = r.json()
     assert body["ledger"]["flagged"] is True and body["ledger"]["flags"][0]["bankId"] == "Org1MSP"
+    assert body["ledger"]["flags"][0]["bank_name"] == "Банк А"
     assert body["risk"]["score"] >= 85 and body["risk"]["level"] == "high"
     assert body["risk"]["reasons"][0]["code"] == "LEDGER_FLAG"
     assert "реестре" in body["risk"]["reasons"][0]["text"]            # язык Айдоса — русский

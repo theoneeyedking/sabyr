@@ -10,7 +10,7 @@ from django.db import close_old_connections, connection, transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
-from bank.models import Account, Transfer
+from bank.models import Account, Bank, Transfer
 
 from . import hashing
 from .client import LedgerUnavailable, get_ledger
@@ -40,7 +40,9 @@ def lookup_flags(bank_id: str, account: Account) -> dict:
         cached = [{"reason": f.reason, "bankId": f.bank_id_code, "timestamp": f.flagged_at.isoformat(), "cached": True}
                   for f in KnownFlag.objects.filter(account_hash=acc_hash)]
         return {"status": "unavailable", "account_hash": acc_hash, "flags": cached}
+    bank_names = dict(Bank.objects.values_list("msp_id", "name"))
     for f in flags:
+        f["bank_name"] = bank_names.get(f.get("bankId", ""), f.get("bankId", ""))  # «Банк А» вместо Org1MSP
         KnownFlag.objects.update_or_create(
             account_hash=acc_hash, bank_id_code=f.get("bankId", ""), reason=f.get("reason", ""),
             defaults={"account": account, "flagged_at": parse_datetime(f.get("timestamp", "")) or timezone.now()})
