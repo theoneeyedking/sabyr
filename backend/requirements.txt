@@ -1,0 +1,13 @@
+Django>=5.1,<5.3
+djangorestframework>=3.15
+drf-spectacular>=0.28
+psycopg[binary]>=3.2
+dj-database-url>=2.2
+gunicorn>=23
+requests>=2.32
+anthropic>=0.60
+numpy>=2.0
+pandas>=2.2
+lightgbm>=4.5
+networkx>=3.3
+scipy>=1.13
