@@ -1,7 +1,8 @@
-# Sabyr: одна команда поднимает БД и backend.
-#   docker compose up -d --build
-# Реестр Fabric поднимается скриптом ledger/network/up.sh (см. `make demo`), шлюз реестра —
-# профилем `ledger`; своя LLM — профилем `own-llm`.
+# Sabyr.
+#   make demo                      — всё для демо одной командой: реестр Fabric, БД, backend, шлюз, данные
+#   docker compose up -d --build   — только БД и backend (без реестра: ledger.status = unavailable)
+# Профили: `ledger` — шлюз и обозреватель реестра (сеть Fabric поднимает ledger/network/up.sh),
+#          `own-llm` — сервер своей дообученной модели ассистента.
 name: sabyr
 
 services:
@@ -37,5 +38,36 @@ services:
       timeout: 3s
       retries: 20
 
+  ledger-gateway:
+    profiles: ["ledger"]
+    build: ./ledger/gateway
+    environment:
+      CRYPTO_PATH: /crypto
+      CHANNEL: sabyr
+      CHAINCODE: sabyr
+    volumes:
+      - ./ledger/network/fabric-samples/test-network/organizations:/crypto:ro
+    networks: [default, fabric]
+    ports:
+      - "8090:8090"   # http://localhost:8090 — «Обозреватель реестра»
+    restart: unless-stopped
+
+  llm:
+    profiles: ["own-llm"]
+    build: ./ml/llm
+    environment:
+      SABYR_ADAPTER_DIR: /models/sabyr-assistant
+    volumes:
+      - ./ml/llm/out:/models:ro
+      - hf-cache:/root/.cache/huggingface
+    ports:
+      - "8001:8001"
+
+networks:
+  fabric:
+    name: fabric_test
+    external: true
+
 volumes:
   pgdata:
+  hf-cache:

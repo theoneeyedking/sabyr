@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sabyr — обозреватель реестра</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --card: #ffffff; --ink: #14232e; --muted: #5d6f7c; --line: #dfe5ea;
+    --accent: #0b6b5d; --flag: #a4471c; --flag-bg: #fdf1e9; --warn: #1f5b99; --warn-bg: #eaf2fb;
+    --a: #0b6b5d; --b: #6a3fa0; --new: #fff8d9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0f171d; --card: #17222a; --ink: #e6edf2; --muted: #93a4b0; --line: #283741;
+      --accent: #4fc3b0; --flag: #f0a070; --flag-bg: #3a2418; --warn: #86b8ee; --warn-bg: #182a3d;
+      --a: #4fc3b0; --b: #b99be6; --new: #3a3413; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 20px 24px 12px; display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: baseline; }
+  h1 { font-size: 22px; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); }
+  .status { margin-left: auto; display: flex; align-items: center; gap: 8px; color: var(--muted); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #b7791f; }
+  .dot.on { background: #2f9e6e; box-shadow: 0 0 0 4px color-mix(in srgb, #2f9e6e 25%, transparent); }
+  main { padding: 0 24px 40px; max-width: 1280px; margin: 0 auto; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 8px 0 18px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .stat b { display: block; font-size: 26px; font-variant-numeric: tabular-nums; }
+  .stat span { color: var(--muted); font-size: 13px; }
+  .note { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--accent);
+    border-radius: 10px; padding: 10px 14px; color: var(--muted); margin-bottom: 16px; }
+  .wrap { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 880px; }
+  th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
+    padding: 12px 14px; border-bottom: 1px solid var(--line); font-weight: 600; }
+  td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  tr.fresh td { animation: flash 4s ease-out; }
+  @keyframes flash { from { background: var(--new); } to { background: transparent; } }
+  .tag { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .tag.flag { color: var(--flag); background: var(--flag-bg); }
+  .tag.warn { color: var(--warn); background: var(--warn-bg); }
+  .bank { font-weight: 600; white-space: nowrap; }
+  .bank.a { color: var(--a); } .bank.b { color: var(--b); }
+  code { font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break: break-all; }
+  .kv { display: grid; grid-template-columns: max-content 1fr; gap: 2px 10px; }
+  .kv span { color: var(--muted); font-size: 12.5px; white-space: nowrap; }
+  .time { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .empty { padding: 40px; text-align: center; color: var(--muted); }
+  .num { font-variant-numeric: tabular-nums; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Обозреватель реестра Sabyr</h1>
+  <span class="sub">Hyperledger Fabric · канал <code>sabyr</code> · Банк А и Банк Б</span>
+  <span class="status"><span class="dot" id="dot"></span><span id="status">подключение…</span></span>
+</header>
+<main>
+  <div class="stats">
+    <div class="stat"><b id="n-total">0</b><span>записей в реестре</span></div>
+    <div class="stat"><b id="n-flags">0</b><span>счетов помечено как дроп</span></div>
+    <div class="stat"><b id="n-warn">0</b><span>фиксаций предупреждений</span></div>
+    <div class="stat"><b id="n-block">—</b><span>последний блок</span></div>
+  </div>
+  <div class="note">В реестр попадают только хэши SHA-256 с солью: ни номера счёта, ни имени клиента, ни суммы здесь нет.
+    Новые записи появляются в реальном времени — страница слушает события чейнкода.</div>
+  <div class="wrap">
+    <table>
+      <thead><tr><th>Время</th><th>Запись</th><th>Банк</th><th>Содержимое (хэши)</th><th>Блок</th></tr></thead>
+      <tbody id="rows"><tr id="empty"><td colspan="5" class="empty">Пока записей нет. Выполните перевод с высоким риском — запись появится здесь.</td></tr></tbody>
+    </table>
+  </div>
+</main>
+<script>
+const BANKS = { Org1MSP: ["Банк А", "a"], Org2MSP: ["Банк Б", "b"] };
+const REASONS = { safe_account: "«безопасный счёт»", fake_shop: "фейковый магазин", investment: "лжеинвестиции",
+                  relative: "«родственник в беде»", courier: "курьер / посылка", unknown: "схема не определена" };
+const rows = document.getElementById("rows");
+const counts = { total: 0, flags: 0, warn: 0 };
+const flagged = new Set();
+let live = false;
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+function kv(pairs) {
+  const box = el("div", "kv");
+  for (const [k, v] of pairs) { box.append(el("span", "", k)); box.append(el("code", "", v)); }
+  return box;
+}
+function add(ev) {
+  const p = ev.payload || {};
+  document.getElementById("empty")?.remove();
+  const tr = el("tr", live ? "fresh" : "");
+  const when = new Date(p.timestamp || Date.now());
+  tr.append(el("td", "time", when.toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })));
+  const isFlag = ev.name === "AccountFlagged";
+  const tdType = el("td");
+  tdType.append(el("span", "tag " + (isFlag ? "flag" : "warn"), isFlag ? "Счёт помечен как дроп" : "Предупреждение клиенту"));
+  tr.append(tdType);
+  const [bankName, bankCls] = BANKS[p.bankId] || [p.bankId || "?", ""];
+  tr.append(el("td", "bank " + bankCls, bankName));
+  const td = el("td");
+  td.append(isFlag
+    ? kv([["хэш счёта", p.accountHash], ["причина", REASONS[p.reason] || p.reason], ["транзакция", ev.txId]])
+    : kv([["хэш перевода", p.transferHash], ["хэш предупреждения", p.warningHash], ["хэш ответа клиента", p.clientResponseHash], ["транзакция", ev.txId]]));
+  tr.append(td);
+  tr.append(el("td", "num", "#" + ev.block));
+  rows.prepend(tr);
+
+  counts.total++;
+  if (isFlag) flagged.add(p.accountHash); else counts.warn++;
+  document.getElementById("n-total").textContent = counts.total;
+  document.getElementById("n-flags").textContent = flagged.size;
+  document.getElementById("n-warn").textContent = counts.warn;
+  document.getElementById("n-block").textContent = "#" + ev.block;
+}
+function connect() {
+  const es = new EventSource("events");
+  es.onmessage = (m) => add(JSON.parse(m.data));
+  es.addEventListener("ready", () => {
+    live = true;
+    document.getElementById("dot").classList.add("on");
+    document.getElementById("status").textContent = "на связи, ждём новые записи";
+  });
+  es.onerror = () => {
+    es.close(); live = false;
+    document.getElementById("dot").classList.remove("on");
+    document.getElementById("status").textContent = "нет связи, переподключение…";
+    rows.replaceChildren(); counts.total = counts.warn = 0; flagged.clear();
+    setTimeout(connect, 3000);
+  };
+}
+connect();
+</script>
+</body>
+</html>

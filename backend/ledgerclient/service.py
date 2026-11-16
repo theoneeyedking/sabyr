@@ -3,9 +3,10 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 
 from django.conf import settings
-from django.db import close_old_connections, transaction
+from django.db import close_old_connections, connection, transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
@@ -51,26 +52,33 @@ def _enqueue(kind: str, bank_id: str, payload: dict) -> LedgerOutbox:
     if settings.LEDGER_SYNC:
         process_outbox_row(row.id)
     else:
-        transaction.on_commit(lambda: threading.Thread(target=_process_in_thread, args=(row.id,), daemon=True).start())
+        transaction.on_commit(lambda: threading.Thread(target=_drain_in_thread, daemon=True).start())
     return row
 
 
-def _process_in_thread(row_id: int) -> None:
+def _drain_in_thread() -> None:
     try:
-        process_outbox_row(row_id)
+        for _ in range(30):  # если очередь занята другим потоком, дожидаемся и проверяем, что ничего не осталось
+            drain_outbox(retries=6)
+            if not LedgerOutbox.objects.filter(status=LedgerOutbox.Status.PENDING).exists():
+                break
+            time.sleep(1)
+    except Exception:  # фоновый поток не должен падать молча
+        log.exception("ошибка отправки очереди в реестр")
     finally:
         close_old_connections()
 
 
-def process_outbox_row(row_id: int) -> None:
+def process_outbox_row(row_id: int) -> bool:
+    """Отправляет одну запись в реестр. Возвращает True, если запись больше не требует отправки."""
     row = LedgerOutbox.objects.get(id=row_id)
-    if row.status == LedgerOutbox.Status.DONE:
-        return
+    if row.status != LedgerOutbox.Status.PENDING:
+        return True
     ledger = get_ledger()
     if ledger is None:
         row.error = "реестр не настроен (LEDGER_GATEWAY_URL пуст)"
         row.save(update_fields=["error"])
-        return
+        return False
     row.attempts += 1
     try:
         if row.kind == "record_warning":
@@ -82,17 +90,50 @@ def process_outbox_row(row_id: int) -> None:
         row.status, row.tx_id, row.error = LedgerOutbox.Status.DONE, (res or {}).get("txId", ""), ""
     except LedgerUnavailable as e:
         row.error = str(e)
-        if row.attempts >= 5:
+        log.warning("запись в реестр не удалась (попытка %s): %s", row.attempts, e)
+        if row.attempts >= 20:
             row.status = LedgerOutbox.Status.FAILED
     row.save()
+    return row.status != LedgerOutbox.Status.PENDING
+
+
+_OUTBOX_LOCK_KEY = 0x5AB1E0  # advisory-блокировка PostgreSQL: очередь разбирает один процесс
+
+
+def drain_outbox(retries: int = 1) -> int:
+    """Отправляет накопившиеся записи строго по порядку создания.
+
+    Порядок важен: записи одного перевода меняют один ключ реестра, и параллельные транзакции
+    Fabric отклонил бы по MVCC-конфликту. Поэтому очередь разбирается последовательно, каждая
+    запись ждёт подтверждения блока, а при ошибке разбор останавливается и повторяется позже.
+    """
+    with connection.cursor() as cur:
+        cur.execute("SELECT pg_try_advisory_lock(%s)", [_OUTBOX_LOCK_KEY])
+        if not cur.fetchone()[0]:
+            return 0  # очередь уже разбирает другой поток или процесс
+    sent = 0
+    try:
+        for attempt in range(retries):
+            ids = list(LedgerOutbox.objects.filter(status=LedgerOutbox.Status.PENDING).order_by("id").values_list("id", flat=True))
+            if not ids:
+                break
+            failed = False
+            for row_id in ids:
+                if not process_outbox_row(row_id):
+                    failed = True
+                    break
+                sent += 1
+            if failed and attempt + 1 < retries:
+                time.sleep(min(2 ** attempt, 15))
+    finally:
+        with connection.cursor() as cur:
+            cur.execute("SELECT pg_advisory_unlock(%s)", [_OUTBOX_LOCK_KEY])
+    return sent
 
 
 def flush_outbox() -> int:
-    """Повторная отправка накопившихся записей (команда `flush_ledger_outbox`)."""
-    ids = list(LedgerOutbox.objects.filter(status=LedgerOutbox.Status.PENDING).values_list("id", flat=True))
-    for i in ids:
-        process_outbox_row(i)
-    return len(ids)
+    """Повторная отправка накопившихся записей (команда `flush_ledger_outbox`, можно ставить в cron)."""
+    return drain_outbox(retries=1)
 
 
 def record_warning(transfer: Transfer, response: str, warning: dict | None = None) -> WarningEvidence:
