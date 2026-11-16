@@ -1,0 +1,932 @@
+openapi: 3.0.3
+info:
+  title: Sabyr API
+  version: 0.1.0
+  description: Защита клиента от социальной инженерии перед переводом денег.
+paths:
+  /api/assistant/message:
+    post:
+      operationId: assistant_message_create
+      description: 'Без `text` — начинает диалог и возвращает первый вопрос ассистента
+        (идемпотентно). С `text` — сохраняет ответ клиента и возвращает следующую
+        реплику. Диалог — не более 4 реплик ассистента. Язык — язык клиента (kz/ru).
+        Если LLM недоступна, возвращается заранее согласованный текст: `provider=static`,
+        `degraded=true`.'
+      summary: Реплика в диалоге с ассистентом
+      tags:
+      - assistant
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssistantMessageIn'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssistantMessageIn'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AssistantMessageIn'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistantMessageOut'
+          description: ''
+  /api/auth/demo-users:
+    get:
+      operationId: auth_demo_users_retrieve
+      summary: Демо-пользователи для экрана входа
+      tags:
+      - auth
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DemoUsers'
+          description: ''
+  /api/auth/login:
+    post:
+      operationId: auth_login_create
+      description: 'Демо-упрощение: настоящая аутентификация остаётся за мобильным
+        банком.'
+      summary: Вход демо-пользователем
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+          description: ''
+  /api/ledger/warnings/{transfer_hash}:
+    get:
+      operationId: ledger_warnings_retrieve
+      description: Возвращает запись реестра по хэшу перевода. Если предупреждение
+        выдавал банк текущего пользователя, дополнительно прикладываются исходные
+        тексты и результат сверки их хэшей с реестром.
+      summary: Запись о предупреждении из реестра (для разбора спора)
+      parameters:
+      - in: path
+        name: transfer_hash
+        schema:
+          type: string
+        required: true
+      tags:
+      - ledger
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerWarning'
+          description: ''
+  /api/me:
+    get:
+      operationId: me_retrieve
+      summary: Профиль и баланс
+      tags:
+      - auth
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+    patch:
+      operationId: me_partial_update
+      summary: Смена языка интерфейса
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedMePatch'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedMePatch'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedMePatch'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/recipients/{account_number}/passport:
+    get:
+      operationId: recipients_passport_retrieve
+      description: 'Что банк знает о счёте получателя: возраст счёта, число уникальных
+        отправителей, доля входящих от незнакомых, скорость вывода, графовые признаки
+        (степень, PageRank, близость к помеченным дропам) и отметки межбанковского
+        реестра. `id` — номер счёта.'
+      summary: Паспорт получателя
+      parameters:
+      - in: path
+        name: account_number
+        schema:
+          type: string
+        required: true
+      tags:
+      - recipients
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Passport'
+          description: ''
+  /api/transfers/{transfer_id}:
+    get:
+      operationId: transfers_retrieve
+      summary: Состояние перевода (для опроса экраном Sabyr)
+      parameters:
+      - in: path
+        name: transfer_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - transfers
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferState'
+          description: ''
+  /api/transfers/check:
+    post:
+      operationId: transfers_check_create
+      description: 'Считает риск 0–100 (контекст отправителя + паспорт получателя
+        + межбанковский реестр) и возвращает действие: allow (< 40), warn (40–70),
+        cooldown (> 70: пауза 15 минут и запрос доверенному лицу).'
+      summary: Оценка риска перед переводом
+      tags:
+      - transfers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CheckRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CheckRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferState'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/transfers/confirm:
+    post:
+      operationId: transfers_confirm_create
+      description: 'Подтверждение возможно, когда сняты все блокировки: при среднем
+        риске — после диалога с ассистентом, при высоком — после паузы охлаждения
+        и ответа доверенного лица. Иначе 409 с кодом assistant_required / cooldown_active
+        / trusted_pending.'
+      summary: Подтверждение или отмена перевода
+      tags:
+      - transfers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConfirmRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConfirmRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferState'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
+  /api/transfers/history:
+    get:
+      operationId: transfers_history_retrieve
+      summary: История переводов
+      parameters:
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: По умолчанию 30
+      tags:
+      - transfers
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/History'
+          description: ''
+  /api/trusted/contact:
+    get:
+      operationId: trusted_contact_retrieve
+      summary: Моё доверенное лицо
+      tags:
+      - trusted
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+    put:
+      operationId: trusted_contact_update
+      summary: Привязать доверенное лицо по номеру телефона
+      tags:
+      - trusted
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrustedContactIn'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TrustedContactIn'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TrustedContactIn'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+    delete:
+      operationId: trusted_contact_destroy
+      summary: Отвязать доверенное лицо
+      tags:
+      - trusted
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/trusted/incoming:
+    get:
+      operationId: trusted_incoming_retrieve
+      summary: Входящие запросы ко мне как к доверенному лицу
+      tags:
+      - trusted
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrustedIncoming'
+          description: ''
+  /api/trusted/request:
+    post:
+      operationId: trusted_request_create
+      description: При риске > 70 запрос создаётся автоматически; этот вызов идемпотентен
+        и нужен, чтобы клиент мог сам попросить помощи при среднем риске.
+      summary: Запросить подтверждение у доверенного лица
+      tags:
+      - trusted
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrustedRequestIn'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TrustedRequestIn'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TrustedRequestIn'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrustedRequestOut'
+          description: ''
+  /api/trusted/respond:
+    post:
+      operationId: trusted_respond_create
+      description: decline — перевод отменяется, запись уходит в реестр, счёт получателя
+        помечается как дроп.
+      summary: 'Ответ доверенного лица: подтвердить или отклонить'
+      tags:
+      - trusted
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrustedRespondIn'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TrustedRespondIn'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TrustedRespondIn'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrustedRequestOut'
+          description: ''
+components:
+  schemas:
+    ActionEnum:
+      enum:
+      - allow
+      - warn
+      - cooldown
+      type: string
+      description: |-
+        * `allow` - allow
+        * `warn` - warn
+        * `cooldown` - cooldown
+    AssistantChatMessage:
+      type: object
+      properties:
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        text:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - created_at
+      - role
+      - text
+    AssistantMessageIn:
+      type: object
+      properties:
+        transfer_id:
+          type: string
+          format: uuid
+        text:
+          type: string
+          maxLength: 1000
+      required:
+      - transfer_id
+    AssistantMessageOut:
+      type: object
+      properties:
+        transfer_id:
+          type: string
+          format: uuid
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssistantChatMessage'
+        reply:
+          allOf:
+          - $ref: '#/components/schemas/AssistantReply'
+          nullable: true
+        turn:
+          type: integer
+        max_turns:
+          type: integer
+        done:
+          type: boolean
+        provider:
+          $ref: '#/components/schemas/ProviderEnum'
+        degraded:
+          type: boolean
+        degraded_reason:
+          type: string
+        can_confirm:
+          type: boolean
+      required:
+      - can_confirm
+      - degraded
+      - degraded_reason
+      - done
+      - max_turns
+      - messages
+      - provider
+      - reply
+      - transfer_id
+      - turn
+    AssistantReply:
+      type: object
+      properties:
+        role:
+          type: string
+        text:
+          type: string
+      required:
+      - role
+      - text
+    CheckRequest:
+      type: object
+      properties:
+        recipient_account:
+          type: string
+          maxLength: 24
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        signals:
+          $ref: '#/components/schemas/Signals'
+      required:
+      - amount
+      - recipient_account
+    CodeEnum:
+      enum:
+      - safe_account
+      - fake_shop
+      - investment
+      - relative
+      - courier
+      - unknown
+      type: string
+      description: |-
+        * `safe_account` - safe_account
+        * `fake_shop` - fake_shop
+        * `investment` - investment
+        * `relative` - relative
+        * `courier` - courier
+        * `unknown` - unknown
+    ConfirmRequest:
+      type: object
+      properties:
+        transfer_id:
+          type: string
+          format: uuid
+        decision:
+          allOf:
+          - $ref: '#/components/schemas/ConfirmRequestDecisionEnum'
+          default: confirm
+        report_fraud:
+          type: boolean
+          default: false
+          description: Клиент сообщает, что его обманывали
+      required:
+      - transfer_id
+    ConfirmRequestDecisionEnum:
+      enum:
+      - confirm
+      - cancel
+      type: string
+      description: |-
+        * `confirm` - confirm
+        * `cancel` - cancel
+    DemoUsers:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+      - users
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          additionalProperties: {}
+          description: '{code, message, …}'
+      required:
+      - error
+    History:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+      - items
+    LangEnum:
+      enum:
+      - kz
+      - ru
+      type: string
+      description: |-
+        * `kz` - kz
+        * `ru` - ru
+    LedgerWarning:
+      type: object
+      properties:
+        transfer_hash:
+          type: string
+        ledger:
+          type: object
+          additionalProperties: {}
+          description: Запись чейнкода GetWarning
+        evidence:
+          type: object
+          additionalProperties: {}
+          nullable: true
+        verified:
+          type: boolean
+          nullable: true
+          description: Хэши локальных текстов совпали с реестром
+      required:
+      - evidence
+      - ledger
+      - transfer_hash
+      - verified
+    LevelEnum:
+      enum:
+      - low
+      - medium
+      - high
+      type: string
+      description: |-
+        * `low` - low
+        * `medium` - medium
+        * `high` - high
+    LoginRequest:
+      type: object
+      properties:
+        client_id:
+          type: integer
+      required:
+      - client_id
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        client:
+          type: object
+          additionalProperties: {}
+      required:
+      - client
+      - token
+    Passport:
+      type: object
+      properties:
+        account:
+          type: string
+        name:
+          type: string
+        bank:
+          type: string
+        is_external:
+          type: boolean
+          description: 'Счёт в другом банке: внутренние признаки неполные'
+        passport:
+          type: object
+          additionalProperties: {}
+        ledger:
+          type: object
+          additionalProperties: {}
+      required:
+      - account
+      - bank
+      - is_external
+      - ledger
+      - name
+      - passport
+    PatchedMePatch:
+      type: object
+      properties:
+        lang:
+          $ref: '#/components/schemas/LangEnum'
+    ProviderEnum:
+      enum:
+      - own
+      - api
+      - static
+      type: string
+      description: |-
+        * `own` - own
+        * `api` - api
+        * `static` - static
+    Reason:
+      type: object
+      properties:
+        code:
+          type: string
+        text:
+          type: string
+          description: На языке клиента
+        ru:
+          type: string
+        kz:
+          type: string
+      required:
+      - code
+      - kz
+      - ru
+      - text
+    Risk:
+      type: object
+      properties:
+        score:
+          type: integer
+          maximum: 100
+          minimum: 0
+        level:
+          $ref: '#/components/schemas/LevelEnum'
+        sender_score:
+          type: integer
+          description: 'Часть риска: контекст отправителя'
+        recipient_score:
+          type: integer
+          description: 'Часть риска: паспорт получателя'
+        reasons:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reason'
+        scheme:
+          allOf:
+          - $ref: '#/components/schemas/Scheme'
+          nullable: true
+      required:
+      - level
+      - reasons
+      - recipient_score
+      - scheme
+      - score
+      - sender_score
+    RoleEnum:
+      enum:
+      - assistant
+      - user
+      type: string
+      description: |-
+        * `assistant` - assistant
+        * `user` - user
+    Scheme:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/CodeEnum'
+        title:
+          type: string
+        how:
+          type: string
+          description: Как работает схема
+      required:
+      - code
+      - how
+      - title
+    Signals:
+      type: object
+      properties:
+        on_call:
+          type: boolean
+          default: false
+          description: Во время перевода идёт телефонный звонок
+        screen_share:
+          type: boolean
+          default: false
+          description: Включена демонстрация экрана
+        session_seconds:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          description: Секунд от входа в приложение до перевода
+        source:
+          type: string
+          description: native — сигнал от устройства, demo — из демо-меню
+          maxLength: 16
+    TransferState:
+      type: object
+      properties:
+        transfer_id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/TransferStateStatusEnum'
+        amount:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        recipient:
+          type: object
+          additionalProperties: {}
+        risk:
+          $ref: '#/components/schemas/Risk'
+        action:
+          $ref: '#/components/schemas/ActionEnum'
+        cooldown_until:
+          type: string
+          format: date-time
+          nullable: true
+        cooldown_seconds_left:
+          type: integer
+        trusted_request:
+          type: object
+          additionalProperties: {}
+          nullable: true
+        assistant_turns:
+          type: integer
+        can_confirm:
+          type: boolean
+        blockers:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+        ledger:
+          type: object
+          additionalProperties: {}
+          description: Только в ответе /transfers/check
+      required:
+      - action
+      - amount
+      - assistant_turns
+      - blockers
+      - can_confirm
+      - cooldown_seconds_left
+      - cooldown_until
+      - created_at
+      - recipient
+      - risk
+      - status
+      - transfer_id
+      - trusted_request
+    TransferStateStatusEnum:
+      enum:
+      - allowed
+      - warned
+      - cooldown
+      - confirmed
+      - cancelled
+      - declined
+      type: string
+      description: |-
+        * `allowed` - allowed
+        * `warned` - warned
+        * `cooldown` - cooldown
+        * `confirmed` - confirmed
+        * `cancelled` - cancelled
+        * `declined` - declined
+    TrustedContactIn:
+      type: object
+      properties:
+        phone:
+          type: string
+        relation:
+          type: string
+      required:
+      - phone
+    TrustedIncoming:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+      - items
+    TrustedRequestIn:
+      type: object
+      properties:
+        transfer_id:
+          type: string
+          format: uuid
+      required:
+      - transfer_id
+    TrustedRequestOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        status:
+          $ref: '#/components/schemas/TrustedRequestOutStatusEnum'
+        created_at:
+          type: string
+          format: date-time
+        responded_at:
+          type: string
+          format: date-time
+          nullable: true
+        transfer:
+          type: object
+          additionalProperties: {}
+      required:
+      - created_at
+      - id
+      - responded_at
+      - status
+      - transfer
+    TrustedRequestOutStatusEnum:
+      enum:
+      - pending
+      - approved
+      - declined
+      type: string
+      description: |-
+        * `pending` - pending
+        * `approved` - approved
+        * `declined` - declined
+    TrustedRespondIn:
+      type: object
+      properties:
+        request_id:
+          type: integer
+        decision:
+          $ref: '#/components/schemas/TrustedRespondInDecisionEnum'
+      required:
+      - decision
+      - request_id
+    TrustedRespondInDecisionEnum:
+      enum:
+      - approve
+      - decline
+      type: string
+      description: |-
+        * `approve` - approve
+        * `decline` - decline
+  securitySchemes:
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: '`Token <api_token>` — токен из /api/auth/login'

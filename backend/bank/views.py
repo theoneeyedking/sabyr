@@ -1,4 +1,5 @@
 from django.db.models import Q
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
 from rest_framework import serializers
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
@@ -48,10 +49,10 @@ def login(request):
     return Response({"token": c.api_token, "client": client_json(c)})
 
 
-@extend_schema(summary="Профиль и баланс", tags=["auth"], methods=["GET"], responses=serializers.DictField())
+@extend_schema(summary="Профиль и баланс", tags=["auth"], methods=["GET"], responses={200: OpenApiTypes.OBJECT})
 @extend_schema(summary="Смена языка интерфейса", tags=["auth"], methods=["PATCH"],
                request=inline_serializer("MePatch", {"lang": serializers.ChoiceField(choices=["kz", "ru"])}),
-               responses=serializers.DictField())
+               responses={200: OpenApiTypes.OBJECT})
 @api_view(["GET", "PATCH"])
 def me(request):
     if request.method == "PATCH":

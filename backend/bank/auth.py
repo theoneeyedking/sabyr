@@ -26,3 +26,15 @@ class ClientTokenAuthentication(authentication.BaseAuthentication):
         except Client.DoesNotExist:
             raise exceptions.AuthenticationFailed("Неверный токен")
         return client, parts[1]
+
+
+from drf_spectacular.extensions import OpenApiAuthenticationExtension  # noqa: E402
+
+
+class ClientTokenScheme(OpenApiAuthenticationExtension):
+    target_class = "bank.auth.ClientTokenAuthentication"
+    name = "tokenAuth"
+
+    def get_security_definition(self, auto_schema):
+        return {"type": "apiKey", "in": "header", "name": "Authorization",
+                "description": "`Token <api_token>` — токен из /api/auth/login"}
