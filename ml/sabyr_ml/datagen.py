@@ -155,10 +155,16 @@ def generate(cfg: Config | None = None) -> dict[str, pd.DataFrame]:
     # окна активности мошеннических счетов
     active_start = np.full(n + cfg.n_external, np.nan)
     active_days = np.full(n + cfg.n_external, np.nan)
+    # Четверть дропов — «арендованные» счета: открыты давно, у владельца обычная история переводов.
+    rented = np.zeros(n, dtype=bool)
     for idx in np.where(kind == "drop")[0]:
         active_start[idx] = start + rng.uniform(2, cfg.days - 4) * DAY
         active_days[idx] = rng.uniform(2, 10)
-        opened[idx] = active_start[idx] - rng.uniform(0.5, 15) * DAY
+        if rng.random() < 0.25:
+            rented[idx] = True
+            age[idx] = int(np.clip(rng.normal(35, 12), 18, 75))
+        else:
+            opened[idx] = active_start[idx] - rng.uniform(0.5, 15) * DAY
     for idx in np.where(kind == "fake_shop")[0]:
         active_start[idx] = start + rng.uniform(2, cfg.days - 8) * DAY
         active_days[idx] = rng.uniform(5, 15)
@@ -254,8 +260,8 @@ def generate(cfg: Config | None = None) -> dict[str, pd.DataFrame]:
                 t = min(ts + r * rng.uniform(3600, 2 * DAY), end - 30)
                 emit_fraud(victim, int(d), t, scheme)
                 drop_first_in[int(d)] = min(drop_first_in.get(int(d), t), t)
-                if d < n and rng.random() < 0.85:  # вывод средств в течение минут
-                    out_ts = t + rng.uniform(120, 30 * 60)
+                if d < n and rng.random() < 0.8:  # вывод средств в течение минут
+                    out_ts = t + float(np.clip(np.exp(rng.normal(np.log(600), 0.8)), 90, 30 * 60))
                     if out_ts < end:
                         dest = int(rng.choice(own_drop_idx)) if rng.random() < 0.15 else int(rng.choice(ext_cashout_idx))
                         if dest != d:
@@ -320,15 +326,15 @@ def generate(cfg: Config | None = None) -> dict[str, pd.DataFrame]:
     salary_df = salary_df[(salary_df.ts < end) & (salary_df.ts > opened[salary_df.recipient_id.to_numpy()])]
 
     # ------------------------------------------------------------------ легитимные переводы
-    n_legit = max(0, cfg.n_transfers - len(fraud_df) - len(cashout_df) - len(salary_df))
-    senders_pool = np.where((kind == "regular") | (kind == "merchant") | (kind == "newbiz"))[0]
+    n_legit = max(0, int((cfg.n_transfers - len(fraud_df) - len(cashout_df) - len(salary_df)) / 1.028))
+    senders_pool = np.where((kind == "regular") | (kind == "merchant") | (kind == "newbiz") | rented)[0]
     activity = rng.gamma(2.0, 1.0, size=len(senders_pool))
     activity[kind[senders_pool] != "regular"] *= 0.3
     sender = rng.choice(senders_pool, size=n_legit, p=activity / activity.sum())
 
     # постоянные контакты (друзья, семья): 80% переводов идут им
     n_contacts = rng.integers(3, 11, size=n)
-    contact_pool = np.concatenate([regular_idx, ext_regular_idx])
+    contact_pool = np.concatenate([regular_idx, np.where(rented)[0], ext_regular_idx])
     contacts = [rng.choice(contact_pool, size=k, replace=False) for k in n_contacts]
 
     day0 = np.floor((start + rng.uniform(0, cfg.days, size=n_legit) * DAY + TZ_OFFSET) / DAY) * DAY
@@ -360,6 +366,10 @@ def generate(cfg: Config | None = None) -> dict[str, pd.DataFrame]:
     amount[lkind == "merchant"] *= 0.5
     big = rng.random(n_legit) < 0.015  # крупные законные покупки: машина, ремонт, помощь родным
     amount[big] *= rng.uniform(8, 40, size=big.sum())
+    big_new = big & (rng.random(n_legit) < 0.5)  # половина крупных покупок — новому получателю (продавец авто, подрядчик)
+    recipient[big_new] = rand_pick[big_new]
+    recipient[recipient == sender] = contact_pool[0] if contact_pool[0] not in sender else contact_pool[1]
+    on_call_p = np.where(big, 0.08, 0.025)  # о крупных покупках нередко договариваются по телефону
     amount = np.clip(amount, 200, 15_000_000).round(-2)
     # время не раньше открытия счетов обеих сторон
     rec_open = np.where(recipient < n, opened[np.minimum(recipient, n - 1)], -np.inf)
@@ -369,15 +379,27 @@ def generate(cfg: Config | None = None) -> dict[str, pd.DataFrame]:
 
     legit_df = pd.DataFrame({
         "ts": ts.astype(np.int64), "sender_id": sender, "recipient_id": recipient, "amount": amount,
-        "on_call": (rng.random(n_legit) < 0.025).astype(int),
+        "on_call": (rng.random(n_legit) < on_call_p).astype(int),
         "screen_share": (rng.random(n_legit) < 0.002).astype(int),
         "session_seconds": np.clip(np.exp(rng.normal(np.log(70), 0.6, size=n_legit)), 8, 900).round(1),
         "is_fraud": 0, "scheme": "", "kind": lkind,
     })
+    big_rows = legit_df[big & (legit_df.ts.to_numpy() < end)]
+    fwd = legit_df[(legit_df.kind == "p2p") & (legit_df.recipient_id < n)].sample(frac=0.04, random_state=cfg.seed)
+    fwd = fwd[np.isin(kind[fwd.recipient_id.to_numpy()], ["regular"])]
+    fwd_df = pd.DataFrame({
+        "ts": fwd.ts.to_numpy() + rng.integers(60, 1800, size=len(fwd)),
+        "sender_id": fwd.recipient_id.to_numpy(),
+        "recipient_id": [contacts[r][0] for r in fwd.recipient_id.to_numpy()],
+        "amount": (fwd.amount.to_numpy() * rng.uniform(0.5, 1.0, size=len(fwd))).round(-2).clip(200),
+        "on_call": 0, "screen_share": 0,
+        "session_seconds": np.clip(np.exp(rng.normal(np.log(70), 0.6, size=len(fwd))), 8, 900).round(1),
+        "is_fraud": 0, "scheme": "", "kind": "p2p",
+    })
+    legit_df = pd.concat([legit_df, fwd_df[fwd_df.sender_id != fwd_df.recipient_id]])
     legit_df = legit_df[legit_df.ts < end]
 
     # законные кредиты: часть крупных покупок оплачена кредитом + фоновые кредиты
-    big_rows = legit_df[legit_df.index.isin(np.where(big)[0])]
     for r in big_rows.itertuples():
         if rng.random() < 0.3:
             loans.append((int(r.sender_id), int(r.ts - rng.uniform(600, 3 * DAY)), round(float(r.amount) * rng.uniform(0.9, 2.0), -3)))

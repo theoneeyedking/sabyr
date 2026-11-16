@@ -1,0 +1,50 @@
+{
+  "features": [
+    "s_on_call",
+    "s_screen_share",
+    "s_new_recipient",
+    "s_amount_ratio",
+    "s_recent_loan",
+    "s_amount_to_loan",
+    "s_night",
+    "s_hour",
+    "s_session_seconds",
+    "s_age",
+    "amount_log",
+    "r_is_external",
+    "r_age_days",
+    "r_unique_senders",
+    "r_in_count",
+    "r_new_sender_share",
+    "r_cashout_median_min",
+    "r_out_in_ratio",
+    "r_in_24h",
+    "r_complaints",
+    "g_in_degree",
+    "g_pagerank",
+    "g_dist_to_drop",
+    "ledger_flag"
+  ],
+  "schemes": [
+    "safe_account",
+    "fake_shop",
+    "investment",
+    "relative",
+    "courier"
+  ],
+  "platt": {
+    "sender": {
+      "a": 1.0359629409922169,
+      "b": -0.16365734721740333
+    },
+    "recipient": {
+      "a": 0.9096568061990199,
+      "b": -0.5879319196300108
+    }
+  },
+  "thresholds": {
+    "warn": 40,
+    "pause": 70
+  },
+  "seed": 42
+}

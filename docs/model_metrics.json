@@ -1,0 +1,155 @@
+{
+  "data": {
+    "clients": 5000,
+    "accounts": 5800,
+    "transfers": 199954,
+    "days": 90,
+    "fraud_transfers": 8588,
+    "fraud_share": 0.0429,
+    "fraud_by_scheme": {
+      "fake_shop": 1582,
+      "safe_account": 1551,
+      "investment": 1544,
+      "relative": 733,
+      "courier": 716
+    },
+    "cashout_transfers": 2462,
+    "drop_accounts": 100,
+    "fake_shops": 20,
+    "loans": 2235,
+    "complaints": 840,
+    "ledger_flags": 58
+  },
+  "split": {
+    "train": 113641,
+    "valid": 22553,
+    "test": 53312,
+    "note": "разбиение по времени: 60 дней обучение, 10 дней калибровка, 20 дней тест"
+  },
+  "risk_model": {
+    "combination": "risk = 1 - (1 - p_sender) * (1 - p_recipient)",
+    "roc_auc": 0.9993,
+    "roc_auc_sender_only": 0.9798,
+    "roc_auc_recipient_only": 0.9991,
+    "pr_auc": 0.9873,
+    "warn_threshold_40": {
+      "precision": 0.8273,
+      "recall": 0.9788,
+      "legit_interrupted_share": 0.0075
+    },
+    "pause_threshold_70": {
+      "precision": 0.9344,
+      "recall": 0.9533,
+      "legit_interrupted_share": 0.0025
+    },
+    "recall_by_scheme": {
+      "safe_account": {
+        "n": 353,
+        "recall_warn": 0.9972,
+        "recall_pause": 0.9887
+      },
+      "fake_shop": {
+        "n": 533,
+        "recall_warn": 0.9681,
+        "recall_pause": 0.9231
+      },
+      "investment": {
+        "n": 669,
+        "recall_warn": 0.9925,
+        "recall_pause": 0.9836
+      },
+      "relative": {
+        "n": 131,
+        "recall_warn": 1.0,
+        "recall_pause": 0.9924
+      },
+      "courier": {
+        "n": 198,
+        "recall_warn": 0.9141,
+        "recall_pause": 0.8434
+      }
+    },
+    "score_bands_legit": {
+      "low": 0.9925,
+      "medium": 0.005,
+      "high": 0.0025
+    },
+    "feature_importance_gain": {
+      "sender": {
+        "amount_log": 0.4339,
+        "s_amount_ratio": 0.295,
+        "s_session_seconds": 0.0681,
+        "s_new_recipient": 0.0604,
+        "s_on_call": 0.0435,
+        "s_amount_to_loan": 0.0386,
+        "s_screen_share": 0.0234,
+        "s_hour": 0.0159,
+        "s_night": 0.0108,
+        "s_age": 0.0098,
+        "s_recent_loan": 0.0007
+      },
+      "recipient": {
+        "r_in_24h": 0.3224,
+        "r_age_days": 0.2257,
+        "r_cashout_median_min": 0.2024,
+        "g_in_degree": 0.0531,
+        "r_out_in_ratio": 0.0389,
+        "r_unique_senders": 0.0342,
+        "r_new_sender_share": 0.0334,
+        "g_pagerank": 0.022,
+        "g_dist_to_drop": 0.0193,
+        "r_in_count": 0.0189,
+        "ledger_flag": 0.0138,
+        "r_is_external": 0.0132,
+        "r_complaints": 0.0027
+      }
+    }
+  },
+  "scheme_model": {
+    "accuracy": 0.9287,
+    "labels": [
+      "safe_account",
+      "fake_shop",
+      "investment",
+      "relative",
+      "courier"
+    ],
+    "confusion_matrix": [
+      [
+        425,
+        0,
+        23,
+        9,
+        0
+      ],
+      [
+        0,
+        557,
+        3,
+        8,
+        3
+      ],
+      [
+        43,
+        1,
+        681,
+        9,
+        0
+      ],
+      [
+        23,
+        3,
+        26,
+        133,
+        4
+      ],
+      [
+        0,
+        0,
+        0,
+        3,
+        261
+      ]
+    ]
+  }
+}
