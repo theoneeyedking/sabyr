@@ -1,0 +1,10 @@
+# Зависимости для дообучения и запуска своей модели ассистента (отдельно от backend).
+torch>=2.3
+transformers>=4.44
+peft>=0.12
+accelerate>=0.33
+datasets>=2.20
+fastapi>=0.112
+uvicorn>=0.30
+requests>=2.32
+anthropic>=0.60
