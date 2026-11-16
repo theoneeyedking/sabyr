@@ -36,7 +36,8 @@ def test_drop_accounts_are_new_with_many_unrelated_senders_and_fast_cashout(data
     inc = t[t.recipient_id.isin(drops) & (t.kind == "fraud")]
     first_in = inc.groupby("recipient_id").ts.min()
     age_days = (first_in - acc.opened_ts[first_in.index]) / DAY
-    assert age_days.max() <= 26 and age_days.median() < 16          # счёт открыт недавно
+    assert age_days.median() < 16                                    # счёт открыт недавно (кроме «арендованных»)
+    assert (age_days > 60).mean() < 0.5
     assert inc.groupby("recipient_id").sender_id.nunique().median() >= 8  # много несвязанных отправителей
     outs = t[t.sender_id.isin(drops) & (t.kind == "cashout")]
     assert len(outs) > 0
