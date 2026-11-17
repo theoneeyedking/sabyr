@@ -1,0 +1,64 @@
+@import '@fontsource-variable/inter-tight';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    html {
+        -webkit-text-size-adjust: 100%;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+        @apply bg-ink font-sans text-bone antialiased;
+    }
+
+    [x-cloak] {
+        display: none !important;
+    }
+
+    :focus-visible {
+        @apply outline outline-2 outline-offset-2 outline-bone;
+    }
+
+    ::selection {
+        @apply bg-bone text-ink;
+    }
+}
+
+@layer components {
+    /* Мелкие подписи капсом */
+    .label {
+        @apply text-[11px] font-semibold uppercase tracking-[0.14em];
+    }
+
+    /* Крупные заголовки */
+    .display {
+        @apply font-black uppercase leading-[0.88] tracking-[-0.04em];
+    }
+
+    .btn {
+        @apply inline-flex h-14 items-center justify-center gap-3 px-8 text-[13px] font-bold uppercase tracking-[0.14em] transition-colors disabled:cursor-not-allowed;
+    }
+
+    .btn-solid {
+        @apply btn bg-bone text-ink hover:bg-white disabled:bg-line disabled:text-ash;
+    }
+
+    .btn-outline {
+        @apply btn border border-bone text-bone hover:bg-bone hover:text-ink;
+    }
+
+    .field {
+        @apply h-12 w-full rounded-none border-0 border-b border-line bg-transparent px-0 text-base text-bone placeholder:text-ash/60 focus:border-bone focus:outline-none focus:ring-0;
+    }
+
+    .no-scrollbar {
+        scrollbar-width: none;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+}
