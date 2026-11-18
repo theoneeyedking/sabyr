@@ -1,3 +1,6 @@
+import {
+  Onest_400Regular, Onest_500Medium, Onest_600SemiBold, Onest_700Bold, Onest_800ExtraBold, useFonts,
+} from '@expo-google-fonts/onest';
 import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
@@ -27,7 +30,11 @@ const navTheme = {
 
 function Root() {
   const { ready, token, client } = useApp();
-  if (!ready) {
+  // Если шрифт не загрузился (ошибка сети на web), приложение работает с системным шрифтом.
+  const [fontsLoaded, fontsError] = useFonts({
+    Onest_400Regular, Onest_500Medium, Onest_600SemiBold, Onest_700Bold, Onest_800ExtraBold,
+  });
+  if (!ready || (!fontsLoaded && !fontsError)) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', backgroundColor: colors.bg }}>
         <Loading />

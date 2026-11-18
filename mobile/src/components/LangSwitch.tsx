@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { Lang } from '../api/types';
 import { useApp } from '../state/AppContext';
-import { colors, font } from '../theme';
+import { colors, font, fonts, shadow } from '../theme';
 
 const LANGS: { code: Lang; label: string }[] = [
   { code: 'kz', label: 'Қаз' },
@@ -32,12 +32,9 @@ export function LangSwitch() {
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 26, padding: 4,
-    borderWidth: 1, borderColor: colors.line,
-  },
-  item: { minWidth: 64, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
-  itemOn: { backgroundColor: colors.primary },
-  label: { fontSize: font.small + 1, fontWeight: '700', color: colors.primary },
-  labelOn: { color: colors.onPrimary },
+  wrap: { flexDirection: 'row', backgroundColor: 'rgba(15,27,42,0.06)', borderRadius: 24, padding: 4 },
+  item: { minWidth: 60, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
+  itemOn: { backgroundColor: colors.surface, ...shadow.card },
+  label: { fontFamily: fonts.semibold, fontSize: font.small, color: colors.inkSoft },
+  labelOn: { color: colors.ink },
 });

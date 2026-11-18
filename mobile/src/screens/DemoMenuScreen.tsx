@@ -6,7 +6,7 @@ import { DEMO_ACCOUNTS } from '../lib/config';
 import { formatAccount } from '../lib/money';
 import type { ScreenProps } from '../navigation';
 import { DEFAULT_API_URL, useApp } from '../state/AppContext';
-import { colors, font, radius, space } from '../theme';
+import { colors, font, fonts, radius, space, noOutline } from '../theme';
 
 /** Скрытое демо-меню: ручные сигналы, адрес API, быстрые счета и показания нативного модуля. */
 export function DemoMenuScreen({ navigation }: ScreenProps<'DemoMenu'>) {
@@ -154,14 +154,20 @@ function Line({ label, value, testID }: { label: string; value: string; testID?:
 
 const styles = StyleSheet.create({
   toggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 60, gap: space.md },
-  toggleLabel: { flex: 1, fontSize: font.body, fontWeight: '600', color: colors.ink },
+  toggleLabel: { flex: 1, fontFamily: fonts.medium, fontSize: font.body, color: colors.ink },
   switch: Platform.OS === 'web' ? { transform: [{ scale: 1.5 }], marginRight: 12 } : {},
   input: {
-    minHeight: 60, borderRadius: radius.button, borderWidth: 2, borderColor: colors.line,
-    backgroundColor: colors.surface, paddingHorizontal: space.md, fontSize: font.body, color: colors.ink,
+    minHeight: 60, borderRadius: radius.inner, borderWidth: 1.5, borderColor: colors.lineStrong,
+    backgroundColor: colors.surfaceSoft, paddingHorizontal: space.md, ...noOutline,
+    fontFamily: fonts.medium, fontSize: font.body, color: colors.ink,
   },
   small: { fontSize: font.small, lineHeight: 22 },
-  line: { flexDirection: 'row', justifyContent: 'space-between', gap: space.md, paddingVertical: 4 },
-  lineLabel: { flex: 1, fontSize: font.small + 1, color: colors.inkSoft },
-  lineValue: { fontSize: font.small + 1, fontWeight: '700', color: colors.ink, textAlign: 'right', flexShrink: 1 },
+  line: {
+    flexDirection: 'row', justifyContent: 'space-between', gap: space.md, paddingVertical: 8,
+    borderBottomWidth: 1, borderBottomColor: colors.line,
+  },
+  lineLabel: { flex: 1, fontFamily: fonts.regular, fontSize: font.small, color: colors.inkSoft },
+  lineValue: {
+    fontFamily: fonts.semibold, fontSize: font.small, color: colors.ink, textAlign: 'right', flexShrink: 1,
+  },
 });

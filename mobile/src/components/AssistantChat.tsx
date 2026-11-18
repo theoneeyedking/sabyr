@@ -1,10 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { ApiError } from '../api/client';
 import type { AssistantResponse, ChatMessage } from '../api/types';
 import { useApp } from '../state/AppContext';
-import { colors, font, radius, space } from '../theme';
+import { colors, font, fonts, radius, space, noOutline } from '../theme';
+import { Icon } from './Icon';
+import { Mark } from './Logo';
+import { PressableScale, TypingDots } from './Motion';
 import { Button } from './ui';
 
 /**
@@ -82,7 +85,10 @@ export function AssistantChat({
 
   return (
     <View style={styles.wrap} testID="assistant-chat">
-      <Text style={styles.title}>{t('chat.title')}</Text>
+      <View style={styles.head}>
+        <Mark size={34} />
+        <Text style={styles.title}>{t('chat.title')}</Text>
+      </View>
 
       {messages.map((m, i) => (
         <View
@@ -95,9 +101,8 @@ export function AssistantChat({
       ))}
 
       {busy ? (
-        <View style={styles.typing} testID="chat-typing">
-          <ActivityIndicator color={colors.primary} />
-          <Text style={styles.note}>{t('chat.typing')}</Text>
+        <View style={styles.typing} testID="chat-typing" accessibilityLabel={t('chat.typing')}>
+          <TypingDots color={colors.inkSoft} />
         </View>
       ) : null}
 
@@ -116,18 +121,18 @@ export function AssistantChat({
         <>
           <View style={styles.chips}>
             {quick.map((q, i) => (
-              <Pressable
+              <PressableScale
                 key={q} disabled={busy} onPress={() => void send(q)} testID={`chat-quick-${i}`}
-                accessibilityRole="button" style={({ pressed }) => [styles.chip, pressed && styles.pressed]}
+                accessibilityRole="button" style={styles.chip} scaleTo={0.94}
               >
                 <Text style={styles.chipText}>{q}</Text>
-              </Pressable>
+              </PressableScale>
             ))}
           </View>
           <View style={styles.inputRow}>
             <TextInput
               value={text} onChangeText={setText} placeholder={t('chat.placeholder')}
-              placeholderTextColor={colors.inkSoft} style={styles.input} multiline testID="chat-input"
+              placeholderTextColor={colors.inkFaint} style={styles.input} multiline testID="chat-input"
               accessibilityLabel={t('chat.placeholder')}
             />
             <Pressable
@@ -135,7 +140,7 @@ export function AssistantChat({
               accessibilityRole="button" accessibilityLabel={t('chat.send')}
               style={[styles.send, (busy || !text.trim()) && styles.sendOff]}
             >
-              <Text style={styles.sendArrow}>➤</Text>
+              <Icon name="arrowUp" size={24} color={colors.onPrimary} stroke={2.4} />
             </Pressable>
           </View>
         </>
@@ -145,35 +150,40 @@ export function AssistantChat({
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: space.sm },
-  title: { fontSize: font.lead, fontWeight: '700', color: colors.ink },
-  bubble: { maxWidth: '92%', borderRadius: 18, paddingHorizontal: space.md, paddingVertical: 12 },
-  bubbleAssistant: { alignSelf: 'flex-start', backgroundColor: colors.primarySoft, borderTopLeftRadius: 6 },
-  bubbleUser: { alignSelf: 'flex-end', backgroundColor: colors.primary, borderTopRightRadius: 6 },
-  author: { fontSize: 14, color: '#C9D8E8', marginBottom: 2 },
-  msg: { fontSize: font.body, lineHeight: 27, color: colors.ink },
+  wrap: { gap: space.sm + 2 },
+  head: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginBottom: 2 },
+  title: { flex: 1, fontFamily: fonts.bold, fontSize: font.lead, letterSpacing: -0.3, color: colors.ink },
+  bubble: { maxWidth: '90%', borderRadius: 22, paddingHorizontal: space.md + 2, paddingVertical: 13 },
+  bubbleAssistant: { alignSelf: 'flex-start', backgroundColor: colors.surfaceSoft, borderTopLeftRadius: 8,
+    borderWidth: 1, borderColor: colors.line },
+  bubbleUser: { alignSelf: 'flex-end', backgroundColor: colors.primary, borderBottomRightRadius: 8 },
+  author: { fontFamily: fonts.medium, fontSize: font.caption, color: colors.onPrimarySoft, marginBottom: 2 },
+  msg: { fontFamily: fonts.regular, fontSize: font.body, lineHeight: 27, color: colors.ink },
   msgUser: { color: colors.onPrimary },
-  typing: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  note: { fontSize: font.small, lineHeight: 22, color: colors.inkSoft },
+  typing: {
+    alignSelf: 'flex-start', backgroundColor: colors.surfaceSoft, borderRadius: 22, borderTopLeftRadius: 8,
+    borderWidth: 1, borderColor: colors.line, paddingHorizontal: space.md + 2, paddingVertical: 14,
+  },
+  note: { fontFamily: fonts.regular, fontSize: font.small - 1, lineHeight: 21, color: colors.inkSoft },
   unavailable: { gap: space.sm },
-  error: { fontSize: font.small + 1, lineHeight: 23, color: '#4A3100', fontWeight: '600' },
+  error: { fontFamily: fonts.medium, fontSize: font.small, lineHeight: 23, color: '#4A3100' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.xs },
   chip: {
-    minHeight: 54, paddingHorizontal: 22, borderRadius: radius.chip, justifyContent: 'center',
-    backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.primary,
+    minHeight: 52, paddingHorizontal: 22, borderRadius: radius.chip, justifyContent: 'center',
+    backgroundColor: colors.primarySoft,
   },
-  chipText: { fontSize: font.body, fontWeight: '700', color: colors.primary },
-  pressed: { opacity: 0.75 },
-  inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: space.sm },
+  chipText: { fontFamily: fonts.semibold, fontSize: font.body, color: colors.primary },
+  inputRow: {
+    flexDirection: 'row', alignItems: 'flex-end', gap: space.sm, padding: 6, paddingLeft: space.md,
+    borderRadius: 32, backgroundColor: colors.surfaceSoft, borderWidth: 1.5, borderColor: colors.line,
+  },
   input: {
-    flex: 1, minHeight: 58, maxHeight: 140, borderRadius: radius.button, borderWidth: 2, borderColor: colors.line,
-    backgroundColor: colors.surface, paddingHorizontal: space.md, paddingVertical: 14,
-    fontSize: font.body, color: colors.ink,
+    flex: 1, minHeight: 50, maxHeight: 140, paddingVertical: 12, ...noOutline,
+    fontFamily: fonts.regular, fontSize: font.body, color: colors.ink,
   },
   send: {
-    width: 58, height: 58, borderRadius: 29, backgroundColor: colors.primary,
+    width: 50, height: 50, borderRadius: 25, backgroundColor: colors.primary,
     alignItems: 'center', justifyContent: 'center',
   },
   sendOff: { backgroundColor: colors.disabled },
-  sendArrow: { fontSize: 24, color: colors.onPrimary },
 });

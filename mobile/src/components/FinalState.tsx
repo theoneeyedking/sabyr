@@ -5,8 +5,10 @@ import type { TransferState } from '../api/types';
 import { formatMoney } from '../lib/money';
 import { firstName } from '../lib/risk';
 import { useApp } from '../state/AppContext';
-import { colors, font, radius, space } from '../theme';
-import { Body, Card, Heading, Title } from './ui';
+import { colors, font, fonts, radius, space } from '../theme';
+import { Icon } from './Icon';
+import { Breathing, Reveal } from './Motion';
+import { Body, Caption, Card, Heading, Title } from './ui';
 
 /** Итог перевода: выполнен, отменён клиентом или отклонён доверенным лицом. */
 export function FinalState({ transfer }: { transfer: TransferState }) {
@@ -29,46 +31,57 @@ export function FinalState({ transfer }: { transfer: TransferState }) {
   const good = status === 'confirmed';
   const protectedMoney = status === 'declined' || status === 'cancelled';
   const showAdvice = protectedMoney && transfer.risk.level !== 'low';
+  const tint = good ? colors.accent : colors.primary;
 
   return (
     <View style={styles.wrap} testID={`final-${status}`}>
-      <View style={[styles.icon, { backgroundColor: good ? colors.accentSoft : colors.primarySoft }]}>
-        {good ? (
-          <Text style={[styles.iconText, { color: colors.accent }]}>✓</Text>
-        ) : (
-          <View style={styles.pause}>
-            <View style={styles.pauseBar} />
-            <View style={styles.pauseBar} />
+      <Reveal>
+        <View style={styles.halo}>
+          <Breathing color={good ? colors.accentGlow : '#9DB6D2'} size={104} />
+          <View style={[styles.icon, { backgroundColor: tint }]}>
+            <Icon name={good ? 'check' : 'shieldCheck'} size={50} color={colors.onPrimary} stroke={2.4} />
           </View>
-        )}
-      </View>
-      <Title style={styles.center}>{title}</Title>
-      <Body style={styles.center} testID="final-text">{text}</Body>
-      {protectedMoney ? (
-        <View style={styles.amountBox}>
-          <Text style={styles.amount}>{formatMoney(transfer.amount)}</Text>
         </View>
+      </Reveal>
+      <Reveal index={1} style={styles.texts}>
+        <Title style={styles.center}>{title}</Title>
+        <Body soft style={styles.center} testID="final-text">{text}</Body>
+      </Reveal>
+      {protectedMoney ? (
+        <Reveal index={2} style={styles.amountBox}>
+          <Icon name="lock" size={22} color={colors.accent} stroke={2.2} />
+          <Text style={styles.amount}>{formatMoney(transfer.amount)}</Text>
+        </Reveal>
       ) : null}
       {showAdvice ? (
-        <Card style={styles.advice}>
-          <Heading>{t('final.adviceTitle')}</Heading>
-          <Body>{t('final.advice')}</Body>
-        </Card>
+        <Reveal index={3} style={styles.advice}>
+          <Card>
+            <Caption>{t('final.adviceTitle')}</Caption>
+            <Heading style={styles.adviceText}>{t('final.advice')}</Heading>
+          </Card>
+        </Reveal>
       ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { alignItems: 'center', gap: space.md, paddingTop: space.lg },
-  icon: { width: 96, height: 96, borderRadius: 48, alignItems: 'center', justifyContent: 'center' },
-  iconText: { fontSize: 44, fontWeight: '800' },
-  pause: { flexDirection: 'row', gap: 10 },
-  pauseBar: { width: 11, height: 36, borderRadius: 5, backgroundColor: colors.primary },
+  wrap: { alignItems: 'center', gap: space.lg, paddingTop: space.xl + 8 },
+  halo: { width: 190, height: 190, alignItems: 'center', justifyContent: 'center' },
+  icon: {
+    width: 104, height: 104, borderRadius: 52, alignItems: 'center', justifyContent: 'center',
+    boxShadow: '0 14px 34px rgba(15,39,66,0.28)',
+  },
+  texts: { gap: space.sm, alignItems: 'center', paddingHorizontal: space.sm },
   center: { textAlign: 'center' },
   amountBox: {
-    backgroundColor: colors.accentSoft, borderRadius: radius.button, paddingHorizontal: space.lg, paddingVertical: space.sm,
+    flexDirection: 'row', alignItems: 'center', gap: space.sm,
+    backgroundColor: colors.accentSoft, borderRadius: radius.chip, paddingHorizontal: space.lg, paddingVertical: 12,
   },
-  amount: { fontSize: font.title, fontWeight: '800', color: colors.accent },
-  advice: { alignSelf: 'stretch', marginTop: space.sm },
+  amount: {
+    fontFamily: fonts.extra, fontSize: font.title - 2, letterSpacing: -0.6, color: colors.accent,
+    fontVariant: ['tabular-nums'],
+  },
+  advice: { alignSelf: 'stretch', width: '100%' },
+  adviceText: { fontFamily: fonts.semibold, fontSize: font.body, lineHeight: 27, letterSpacing: 0 },
 });

@@ -170,7 +170,7 @@ const tid = (page, id) => page.getByTestId(id);
 const top = (page, id) => page.getByTestId(id).last();
 
 async function shot(page, name) {
-  await page.waitForTimeout(350);
+  await page.waitForTimeout(1300); // даём доиграть анимациям появления
   await page.screenshot({ path: path.join(SHOTS, name) });
   console.log(`   📷 ${name}`);
 }

@@ -161,3 +161,10 @@ e2e/walkthrough.js         сквозной прогон демо-сценари
 Конфиг — [vercel.json](vercel.json): сборка `expo export --platform web`, раздаётся `dist/` (SPA).
 Деплой: `cd mobile && npx vercel deploy --prod`. На Vercel едет только фронтенд: backend, PostgreSQL и Fabric
 работают в Docker. Адрес API задаётся переменной `EXPO_PUBLIC_API_URL` при сборке или в «Демо-меню» приложения.
+
+## Оформление
+
+Тема — в [src/theme.ts](src/theme.ts): цвета, шрифт Onest (есть казахские буквы и ₸), тени, радиусы.
+Иконки и шкала риска нарисованы через `react-native-svg`, анимации — встроенным `Animated`
+([src/components/Motion.tsx](src/components/Motion.tsx)); при системной настройке «уменьшить движение» они отключаются.
+`react-native-svg` и `expo-font` — нативные модули: после обновления нужен новый Android dev build (`npx expo run:android`).

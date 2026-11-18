@@ -28,6 +28,7 @@ export const kz: Record<I18nKey, string> = {
   'home.trustedPending': 'Сізден аударымды тексеруді сұрап жатыр',
   'home.logout': 'Шығу',
   'home.language': 'Тіл',
+  'home.protected': 'Sabyr қорғап тұр',
 
   'transfer.title': 'Аударым',
   'transfer.recipient': 'Алушының шот нөмірі',

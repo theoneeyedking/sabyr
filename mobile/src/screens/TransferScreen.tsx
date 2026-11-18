@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { Body, Button, ErrorNote, Screen } from '../components/ui';
+import { Icon } from '../components/Icon';
+import { Reveal } from '../components/Motion';
+import { Button, Caption, ErrorNote, Screen } from '../components/ui';
 import { formatAmountInput, formatMoney, normalizeAccount, parseAmountInput } from '../lib/money';
 import type { ScreenProps } from '../navigation';
 import { useApp } from '../state/AppContext';
-import { colors, font, radius, space } from '../theme';
+import { colors, font, fonts, radius, shadow, space, noOutline } from '../theme';
 
 /** Перевод: счёт получателя и сумма. «Продолжить» отправляет перевод на проверку Sabyr. */
 export function TransferScreen({ navigation }: ScreenProps<'Transfer'>) {
@@ -14,6 +16,7 @@ export function TransferScreen({ navigation }: ScreenProps<'Transfer'>) {
   const [amount, setAmount] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [focus, setFocus] = useState<'account' | 'amount' | null>(null);
 
   // Счёт, выбранный в демо-меню, подставляется в форму один раз.
   useEffect(() => {
@@ -47,38 +50,55 @@ export function TransferScreen({ navigation }: ScreenProps<'Transfer'>) {
       footer={
         <Button
           label={busy ? t('transfer.checking') : t('transfer.continue')} onPress={() => void submit()}
-          disabled={!ready || busy} testID="transfer-continue"
+          disabled={!ready || busy} testID="transfer-continue" icon={busy ? undefined : 'arrowRight'}
         />
       }
     >
-      <View style={styles.field}>
-        <Text style={styles.label}>{t('transfer.recipient')}</Text>
+      <Reveal style={[styles.field, styles.amountField, focus === 'amount' && styles.fieldFocus]}>
+        <Caption>{t('transfer.amount')}</Caption>
+        <View style={styles.amountRow}>
+          <TextInput
+            value={amount} onChangeText={(v) => setAmount(formatAmountInput(v))} testID="input-amount"
+            placeholder={t('transfer.amountPlaceholder')} placeholderTextColor={colors.disabled}
+            keyboardType="number-pad" inputMode="numeric" style={[styles.input, styles.amount]}
+            accessibilityLabel={t('transfer.amount')}
+            onFocus={() => setFocus('amount')} onBlur={() => setFocus(null)}
+          />
+          <Text style={styles.currency}>₸</Text>
+        </View>
+        <Text style={styles.hint}>
+          {t('transfer.available', { amount: formatMoney(client?.account?.balance) })}
+        </Text>
+      </Reveal>
+
+      <Reveal index={1} style={[styles.field, focus === 'account' && styles.fieldFocus]}>
+        <Caption>{t('transfer.recipient')}</Caption>
         <TextInput
           value={account} onChangeText={(v) => setAccount(v.toUpperCase())} testID="input-account"
           placeholder={t('transfer.recipientPlaceholder')} placeholderTextColor={colors.disabled}
           autoCapitalize="characters" autoCorrect={false} style={styles.input}
           accessibilityLabel={t('transfer.recipient')}
+          onFocus={() => setFocus('account')} onBlur={() => setFocus(null)}
         />
-      </View>
-
-      <View style={styles.field}>
-        <Text style={styles.label}>{t('transfer.amount')}</Text>
-        <TextInput
-          value={amount} onChangeText={(v) => setAmount(formatAmountInput(v))} testID="input-amount"
-          placeholder={t('transfer.amountPlaceholder')} placeholderTextColor={colors.disabled}
-          keyboardType="number-pad" inputMode="numeric" style={[styles.input, styles.amount]}
-          accessibilityLabel={t('transfer.amount')}
-        />
-        <Body soft style={styles.hint}>
-          {t('transfer.available', { amount: formatMoney(client?.account?.balance) })}
-        </Body>
-      </View>
+      </Reveal>
 
       {demo.onCall || demo.screenShare ? (
-        <View style={styles.signals} testID="signals-note">
-          {demo.onCall ? <Text style={styles.signalText}>● {t('transfer.signalCall')}</Text> : null}
-          {demo.screenShare ? <Text style={styles.signalText}>● {t('transfer.signalScreen')}</Text> : null}
-        </View>
+        <Reveal index={2} style={styles.signals}>
+          <View testID="signals-note" style={styles.signalsInner}>
+            {demo.onCall ? (
+              <View style={styles.signal}>
+                <Icon name="phone" size={20} color={colors.primary} />
+                <Text style={styles.signalText}>{t('transfer.signalCall')}</Text>
+              </View>
+            ) : null}
+            {demo.screenShare ? (
+              <View style={styles.signal}>
+                <Icon name="screen" size={20} color={colors.primary} />
+                <Text style={styles.signalText}>{t('transfer.signalScreen')}</Text>
+              </View>
+            ) : null}
+          </View>
+        </Reveal>
       ) : null}
 
       <ErrorNote text={error} />
@@ -87,15 +107,24 @@ export function TransferScreen({ navigation }: ScreenProps<'Transfer'>) {
 }
 
 const styles = StyleSheet.create({
-  field: { gap: space.sm },
-  label: { fontSize: font.body, fontWeight: '700', color: colors.ink },
-  input: {
-    minHeight: 66, borderRadius: radius.button, borderWidth: 2, borderColor: colors.line,
-    backgroundColor: colors.surface, paddingHorizontal: space.md, fontSize: font.lead, color: colors.ink,
-    fontWeight: '600',
+  field: {
+    gap: 4, backgroundColor: colors.surface, borderRadius: radius.card, paddingHorizontal: space.md + 4,
+    paddingTop: space.md, paddingBottom: space.sm + 2, borderWidth: 2, borderColor: 'transparent', ...shadow.card,
   },
-  amount: { fontSize: font.title + 2, minHeight: 76, fontWeight: '800' },
-  hint: { fontSize: font.small + 1 },
-  signals: { backgroundColor: colors.primarySoft, borderRadius: radius.button, padding: space.md, gap: 4 },
-  signalText: { fontSize: font.small + 1, lineHeight: 24, color: colors.primary, fontWeight: '600' },
+  fieldFocus: { borderColor: colors.primary },
+  amountField: { paddingBottom: space.md },
+  amountRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  input: {
+    flex: 1, minHeight: 52, minWidth: 0, ...noOutline, padding: 0,
+    fontFamily: fonts.semibold, fontSize: font.lead, letterSpacing: 0.2, color: colors.ink,
+  },
+  amount: {
+    fontFamily: fonts.extra, fontSize: font.huge, minHeight: 64, letterSpacing: -1.4, fontVariant: ['tabular-nums'],
+  },
+  currency: { fontFamily: fonts.bold, fontSize: font.title + 4, color: colors.inkFaint },
+  hint: { fontFamily: fonts.regular, fontSize: font.small, lineHeight: 22, color: colors.inkSoft },
+  signals: { backgroundColor: colors.primarySoft, borderRadius: radius.button, padding: space.md },
+  signalsInner: { gap: space.sm },
+  signal: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  signalText: { flex: 1, fontFamily: fonts.medium, fontSize: font.small, lineHeight: 23, color: colors.primary },
 });

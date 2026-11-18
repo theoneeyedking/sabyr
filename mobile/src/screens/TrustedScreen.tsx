@@ -3,7 +3,8 @@ import React, { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { IncomingRequest } from '../api/types';
-import { Body, Button, Card, ErrorNote, Heading, Loading, Row, Screen } from '../components/ui';
+import { Icon } from '../components/Icon';
+import { Body, Button, Caption, Card, Divider, ErrorNote, Heading, IconBadge, Loading, Pill, Screen } from '../components/ui';
 import { formatDateTime, type I18nKey } from '../i18n';
 import { ru } from '../i18n/ru';
 import { formatAccount, formatMoney } from '../lib/money';
@@ -11,7 +12,7 @@ import { firstName } from '../lib/risk';
 import { usePolling } from '../lib/usePolling';
 import type { ScreenProps } from '../navigation';
 import { useApp } from '../state/AppContext';
-import { colors, font, levelColor, radius, space } from '../theme';
+import { colors, font, fonts, levelColor, radius, shadow, space } from '../theme';
 
 /** Доверенное лицо: входящие просьбы проверить перевод и сведения о моём доверенном лице. */
 export function TrustedScreen({ navigation }: ScreenProps<'Trusted'>) {
@@ -88,39 +89,64 @@ export function TrustedScreen({ navigation }: ScreenProps<'Trusted'>) {
         const tone = levelColor[tr.risk_level] ?? levelColor.high;
         const sender = firstName(tr.sender_name);
         return (
-          <Card key={r.id} testID="trusted-request" style={styles.request}>
+          <Card key={r.id} testID="trusted-request" style={styles.request} index={0}>
             <Heading>{t('trusted.requestTitle', { name: tr.sender_name })}</Heading>
-            <Row label={t('trusted.amount')} value={formatMoney(tr.amount)} strong />
-            <Row
-              label={t('trusted.to')}
-              value={`${tr.recipient.name} · ${tr.recipient.bank}\n${formatAccount(tr.recipient.account)}`}
-            />
+            <View style={styles.amountBox}>
+              <Caption>{t('trusted.amount')}</Caption>
+              <Text style={styles.amount} adjustsFontSizeToFit numberOfLines={1}>{formatMoney(tr.amount)}</Text>
+            </View>
+            <View style={styles.to}>
+              <Caption>{t('trusted.to')}</Caption>
+              <Text style={styles.strong}>{tr.recipient.name} · {tr.recipient.bank}</Text>
+              <Text style={styles.account}>{formatAccount(tr.recipient.account)}</Text>
+            </View>
             <View style={[styles.risk, { backgroundColor: tone.bg }]}>
+              <View style={[styles.riskDot, { backgroundColor: tone.vivid }]} />
               <Text style={[styles.riskText, { color: tone.fg }]} testID="trusted-risk">
                 {t('trusted.risk')}: {tr.risk_score} / 100 · {t(`level.${tr.risk_level}`)}
               </Text>
             </View>
 
-            {tr.signals.on_call ? <Body style={styles.signal}>● {t('trusted.onCall')}</Body> : null}
-            {tr.signals.screen_share ? <Body style={styles.signal}>● {t('trusted.screenShare')}</Body> : null}
+            {tr.signals.on_call || tr.signals.screen_share ? (
+              <View style={styles.signals}>
+                {tr.signals.on_call ? (
+                  <View style={styles.signal}>
+                    <Icon name="phone" size={20} color={colors.primary} />
+                    <Text style={styles.signalText}>{t('trusted.onCall')}</Text>
+                  </View>
+                ) : null}
+                {tr.signals.screen_share ? (
+                  <View style={styles.signal}>
+                    <Icon name="screen" size={20} color={colors.primary} />
+                    <Text style={styles.signalText}>{t('trusted.screenShare')}</Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
 
-            <Text style={styles.caption}>{t('trusted.reasons')}</Text>
+            <Divider />
+            <Caption>{t('trusted.reasons')}</Caption>
             {tr.reasons.map((reason, i) => (
-              <Body key={reason.code + i} testID="trusted-reason">• {reason.text}</Body>
+              <View key={reason.code + i} style={styles.reason}>
+                <View style={[styles.reasonNum, { backgroundColor: tone.bg }]}>
+                  <Text style={[styles.reasonNumText, { color: tone.fg }]}>{i + 1}</Text>
+                </View>
+                <Body style={styles.flex} testID="trusted-reason">{reason.text}</Body>
+              </View>
             ))}
 
             {tr.scheme ? (
-              <>
-                <Text style={styles.caption}>{t('trusted.scheme')}</Text>
-                <Body style={styles.schemeTitle}>{tr.scheme.title}</Body>
+              <View style={[styles.scheme, { borderLeftColor: tone.vivid }]}>
+                <Caption>{t('trusted.scheme')}</Caption>
+                <Text style={styles.strong}>{tr.scheme.title}</Text>
                 <Body>{tr.scheme.how}</Body>
-              </>
+              </View>
             ) : null}
 
             <View style={styles.advice}>
-              <Body>{t('trusted.advice', { name: sender })}</Body>
+              <Icon name="info" size={22} color={colors.primary} />
+              <Text style={styles.adviceText}>{t('trusted.advice', { name: sender })}</Text>
             </View>
-
           </Card>
         );
       })}
@@ -129,8 +155,13 @@ export function TrustedScreen({ navigation }: ScreenProps<'Trusted'>) {
       <Card testID="my-trusted">
         {contact ? (
           <>
-            <Body style={styles.schemeTitle}>{contact.name}{relation ? ` · ${relation}` : ''}</Body>
-            <Body soft>{contact.phone}</Body>
+            <View style={styles.person}>
+              <IconBadge name="users" bg={colors.accentSoft} color={colors.accent} />
+              <View style={styles.flex}>
+                <Text style={styles.strong}>{contact.name}{relation ? ` · ${relation}` : ''}</Text>
+                <Text style={styles.account}>{contact.phone}</Text>
+              </View>
+            </View>
             <Body soft style={styles.small}>{t('trusted.mineHint')}</Body>
           </>
         ) : (
@@ -140,8 +171,8 @@ export function TrustedScreen({ navigation }: ScreenProps<'Trusted'>) {
 
       {client && client.trusted_for.length > 0 ? (
         <Card testID="trusted-for">
-          <Text style={styles.caption}>{t('trusted.iAmFor')}</Text>
-          {client.trusted_for.map((name) => <Body key={name} style={styles.schemeTitle}>{name}</Body>)}
+          <Caption>{t('trusted.iAmFor')}</Caption>
+          {client.trusted_for.map((name) => <Text key={name} style={styles.strong}>{name}</Text>)}
         </Card>
       ) : null}
 
@@ -150,11 +181,14 @@ export function TrustedScreen({ navigation }: ScreenProps<'Trusted'>) {
           <Heading style={styles.section}>{t('trusted.earlier')}</Heading>
           {earlier.map((r) => (
             <Card key={r.id} testID="trusted-earlier">
-              <Body style={styles.schemeTitle}>{r.transfer.sender_name} · {formatMoney(r.transfer.amount)}</Body>
-              <Body soft style={styles.small}>
-                {t(r.status === 'approved' ? 'trusted.youApproved' : 'trusted.youDeclined')}
-                {r.responded_at ? ` · ${formatDateTime(r.responded_at)}` : ''}
-              </Body>
+              <Text style={styles.strong}>{r.transfer.sender_name} · {formatMoney(r.transfer.amount)}</Text>
+              <Pill
+                label={t(r.status === 'approved' ? 'trusted.youApproved' : 'trusted.youDeclined')}
+                fg={r.status === 'approved' ? colors.inkSoft : colors.accent}
+                bg={r.status === 'approved' ? colors.disabledBg : colors.accentSoft}
+                icon={r.status === 'approved' ? undefined : 'shieldCheck'}
+              />
+              {r.responded_at ? <Text style={styles.account}>{formatDateTime(r.responded_at)}</Text> : null}
             </Card>
           ))}
         </>
@@ -164,13 +198,35 @@ export function TrustedScreen({ navigation }: ScreenProps<'Trusted'>) {
 }
 
 const styles = StyleSheet.create({
-  request: { borderWidth: 2, borderColor: colors.primary },
-  risk: { borderRadius: radius.button, paddingHorizontal: space.md, paddingVertical: space.sm },
-  riskText: { fontSize: font.body, lineHeight: 26, fontWeight: '800' },
-  signal: { color: colors.primary, fontWeight: '600' },
-  caption: { fontSize: font.small, lineHeight: 22, color: colors.inkSoft, marginTop: space.xs },
-  schemeTitle: { fontWeight: '700' },
-  advice: { backgroundColor: colors.primarySoft, borderRadius: radius.button, padding: space.md, marginVertical: space.xs },
-  section: { marginTop: space.sm },
-  small: { fontSize: font.small + 1, lineHeight: 23 },
+  flex: { flex: 1 },
+  request: { gap: space.md, ...shadow.raised },
+  amountBox: { gap: 2 },
+  amount: {
+    fontFamily: fonts.extra, fontSize: font.huge - 4, lineHeight: 46, letterSpacing: -1.2, color: colors.ink,
+    fontVariant: ['tabular-nums'],
+  },
+  to: { gap: 2 },
+  strong: { fontFamily: fonts.semibold, fontSize: font.body, lineHeight: 26, color: colors.ink },
+  account: { fontFamily: fonts.regular, fontSize: font.small - 1, lineHeight: 22, letterSpacing: 0.3, color: colors.inkSoft },
+  risk: {
+    flexDirection: 'row', alignItems: 'center', gap: space.sm,
+    borderRadius: radius.inner, paddingHorizontal: space.md, paddingVertical: space.sm + 2,
+  },
+  riskDot: { width: 10, height: 10, borderRadius: 5 },
+  riskText: { flex: 1, fontFamily: fonts.bold, fontSize: font.body - 1, lineHeight: 25 },
+  signals: { gap: space.sm },
+  signal: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  signalText: { flex: 1, fontFamily: fonts.medium, fontSize: font.small + 1, lineHeight: 24, color: colors.primary },
+  reason: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm + 2 },
+  reasonNum: { width: 32, height: 32, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  reasonNumText: { fontFamily: fonts.bold, fontSize: font.small },
+  scheme: { borderLeftWidth: 3, paddingLeft: space.md, gap: 2 },
+  advice: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: space.sm,
+    backgroundColor: colors.primarySoft, borderRadius: radius.inner + 2, padding: space.md,
+  },
+  adviceText: { flex: 1, fontFamily: fonts.medium, fontSize: font.small + 1, lineHeight: 25, color: colors.primary },
+  person: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  section: { marginTop: space.md },
+  small: { fontSize: font.small, lineHeight: 23 },
 });

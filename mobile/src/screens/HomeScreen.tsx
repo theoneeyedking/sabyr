@@ -1,18 +1,21 @@
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle, Defs, LinearGradient, RadialGradient, Rect, Stop } from 'react-native-svg';
 
 import { LangSwitch } from '../components/LangSwitch';
 import { Logo } from '../components/Logo';
-import { Button, Screen } from '../components/ui';
+import { Icon, type IconName } from '../components/Icon';
+import { PressableScale, Reveal, useSvgId } from '../components/Motion';
+import { Divider, IconBadge, Screen } from '../components/ui';
 import { formatAccount, formatMoney } from '../lib/money';
 import { firstName } from '../lib/risk';
 import { usePolling } from '../lib/usePolling';
 import type { ScreenProps } from '../navigation';
 import { useApp } from '../state/AppContext';
-import { colors, font, radius, space } from '../theme';
+import { colors, font, fonts, shadow, space } from '../theme';
 
-/** Главная: приветствие, баланс и три больших действия. */
+/** Главная: приветствие, карта с балансом и переводом, история и доверенное лицо. */
 export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
   const { api, client, refreshMe, logout, t, describeError } = useApp();
   const focused = useIsFocused();
@@ -34,6 +37,8 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
   }, 3000, focused);
 
   if (!client) return null;
+  const money = formatMoney(client.account?.balance);
+  const cut = money.lastIndexOf(' ');
 
   return (
     <Screen testID="screen-home">
@@ -42,96 +47,166 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
         <LangSwitch />
       </View>
 
-      <Text style={styles.greeting} testID="greeting">{t('home.greeting', { name: firstName(client.full_name) })}</Text>
+      <Reveal>
+        <Text style={styles.greeting} testID="greeting">{t('home.greeting', { name: firstName(client.full_name) })}</Text>
+      </Reveal>
 
-      <View style={styles.balanceCard}>
-        <Text style={styles.balanceLabel}>{t('home.balance')}</Text>
-        <Text style={styles.balance} testID="balance" adjustsFontSizeToFit numberOfLines={1}>
-          {formatMoney(client.account?.balance)}
-        </Text>
-        {client.account ? (
-          <Text style={styles.account}>{client.bank.name} · {formatAccount(client.account.number)}</Text>
-        ) : null}
-      </View>
+      <Reveal index={1}>
+        <View style={styles.balanceCard}>
+          <CardArt />
+          <View style={styles.balanceHead}>
+            <Text style={styles.balanceLabel}>{t('home.balance')}</Text>
+            <View style={styles.guard}>
+              <View style={styles.guardDot} />
+              <Text style={styles.guardText}>{t('home.protected')}</Text>
+            </View>
+          </View>
+          <Text style={styles.balance} testID="balance" adjustsFontSizeToFit numberOfLines={1}>
+            {money.slice(0, cut)}<Text style={styles.currency}>{money.slice(cut)}</Text>
+          </Text>
+          {client.account ? (
+            <Text style={styles.account}>{client.bank.name} · {formatAccount(client.account.number)}</Text>
+          ) : null}
+          <PressableScale
+            onPress={() => navigation.navigate('Transfer')} testID="tile-transfer" accessibilityRole="button"
+            style={styles.transfer}
+          >
+            <View style={styles.flex}>
+              <Text style={styles.transferTitle}>{t('home.transfer')}</Text>
+              <Text style={styles.transferHint}>{t('home.transferHint')}</Text>
+            </View>
+            <View style={styles.transferArrow}>
+              <Icon name="arrowRight" size={24} color={colors.onPrimary} stroke={2.3} />
+            </View>
+          </PressableScale>
+        </View>
+      </Reveal>
 
-      <Tile
-        icon="→" title={t('home.transfer')} hint={t('home.transferHint')} primary testID="tile-transfer"
-        onPress={() => navigation.navigate('Transfer')}
-      />
-      <Tile
-        icon="≡" title={t('home.history')} hint={t('home.historyHint')} testID="tile-history"
-        onPress={() => navigation.navigate('History')}
-      />
-      <Tile
-        icon="♥" title={t('home.trusted')} hint={pending > 0 ? t('home.trustedPending') : t('home.trustedHint')}
-        badge={pending} testID="tile-trusted" onPress={() => navigation.navigate('Trusted')}
-      />
+      <Reveal index={2}>
+        <View style={styles.list}>
+          <Tile
+            icon="clock" title={t('home.history')} hint={t('home.historyHint')} testID="tile-history"
+            onPress={() => navigation.navigate('History')}
+          />
+          <Divider />
+          <Tile
+            icon="users" title={t('home.trusted')} hint={pending > 0 ? t('home.trustedPending') : t('home.trustedHint')}
+            badge={pending} testID="tile-trusted" onPress={() => navigation.navigate('Trusted')}
+          />
+        </View>
+      </Reveal>
 
-      <Button label={t('home.logout')} variant="ghost" onPress={logout} testID="logout" />
+      <PressableScale onPress={logout} testID="logout" accessibilityRole="button" style={styles.logout}>
+        <Icon name="logout" size={20} color={colors.inkSoft} />
+        <Text style={styles.logoutText}>{t('home.logout')}</Text>
+      </PressableScale>
     </Screen>
   );
 }
 
+/** Фон карты баланса: глубокий градиент, изумрудное свечение и расходящиеся круги — мотив паузы. */
+function CardArt() {
+  const base = useSvgId('card');
+  const glow = useSvgId('cardGlow');
+  return (
+    <View style={styles.art}>
+      <Svg width="100%" height="100%">
+        <Defs>
+          <LinearGradient id={base} x1="0" y1="0" x2="1" y2="1">
+            <Stop offset="0" stopColor={colors.primaryLift} />
+            <Stop offset="0.55" stopColor={colors.primary} />
+            <Stop offset="1" stopColor={colors.primaryDeep} />
+          </LinearGradient>
+          <RadialGradient id={glow} cx="92%" cy="0%" r="75%">
+            <Stop offset="0" stopColor={colors.accentGlow} stopOpacity="0.42" />
+            <Stop offset="1" stopColor={colors.accentGlow} stopOpacity="0" />
+          </RadialGradient>
+        </Defs>
+        <Rect width="100%" height="100%" fill={`url(#${base})`} />
+        <Rect width="100%" height="100%" fill={`url(#${glow})`} />
+        {[70, 120, 170, 220].map((r) => (
+          <Circle key={r} cx="100%" cy="0" r={r} stroke="#FFFFFF" strokeOpacity={0.07} strokeWidth={1.5} fill="none" />
+        ))}
+      </Svg>
+    </View>
+  );
+}
+
 function Tile({
-  icon, title, hint, onPress, primary, badge, testID,
+  icon, title, hint, onPress, badge, testID,
 }: {
-  icon: string; title: string; hint: string; onPress: () => void; primary?: boolean; badge?: number; testID: string;
+  icon: IconName; title: string; hint: string; onPress: () => void; badge?: number; testID: string;
 }) {
   return (
-    <Pressable
-      onPress={onPress} testID={testID} accessibilityRole="button"
-      style={({ pressed }) => [styles.tile, primary && styles.tilePrimary, pressed && styles.pressed]}
-    >
-      <View style={[styles.tileIcon, primary && styles.tileIconPrimary]}>
-        <Text style={[styles.tileIconText, primary && styles.onPrimary]}>{icon}</Text>
-      </View>
+    <PressableScale onPress={onPress} testID={testID} accessibilityRole="button" style={styles.tile} scaleTo={0.98}>
+      <IconBadge name={icon} bg={badge ? colors.mediumSoft : colors.primarySoft} color={badge ? colors.medium : colors.primary} />
       <View style={styles.flex}>
-        <Text style={[styles.tileTitle, primary && styles.onPrimary]}>{title}</Text>
-        <Text style={[styles.tileHint, primary && styles.onPrimarySoft, !!badge && styles.tileHintAlert]}>{hint}</Text>
+        <Text style={styles.tileTitle}>{title}</Text>
+        <Text style={[styles.tileHint, !!badge && styles.tileHintAlert]}>{hint}</Text>
       </View>
       {badge ? (
         <View style={styles.badge} testID="trusted-badge">
           <Text style={styles.badgeText}>{badge}</Text>
         </View>
       ) : (
-        <Text style={[styles.chevron, primary && styles.onPrimary]}>›</Text>
+        <Icon name="chevronRight" size={24} color={colors.inkFaint} />
       )}
-    </Pressable>
+    </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: space.sm },
-  greeting: { fontSize: font.title - 2, lineHeight: 34, fontWeight: '800', color: colors.ink, marginTop: space.sm },
+  greeting: {
+    fontFamily: fonts.extra, fontSize: font.title + 2, lineHeight: 36, letterSpacing: -0.9, color: colors.ink,
+    marginTop: space.md,
+  },
   balanceCard: {
-    backgroundColor: colors.surface, borderRadius: radius.card, padding: space.lg, gap: 4,
-    borderWidth: 1, borderColor: colors.line,
+    borderRadius: 32, padding: space.lg, paddingBottom: space.md, overflow: 'hidden',
+    backgroundColor: colors.primary, ...shadow.raised,
   },
-  balanceLabel: { fontSize: font.small + 1, color: colors.inkSoft },
-  balance: { fontSize: font.huge, lineHeight: 48, fontWeight: '800', color: colors.ink },
-  account: { fontSize: font.small, color: colors.inkSoft, marginTop: 4 },
-  tile: {
-    flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 96, padding: space.md,
-    backgroundColor: colors.surface, borderRadius: radius.card, borderWidth: 1, borderColor: colors.line,
+  art: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, pointerEvents: 'none' },
+  balanceHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm },
+  balanceLabel: { fontFamily: fonts.medium, fontSize: font.small, color: colors.onPrimarySoft },
+  guard: {
+    flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)',
   },
-  tilePrimary: { backgroundColor: colors.primary, borderColor: colors.primary },
-  pressed: { opacity: 0.85 },
-  tileIcon: {
-    width: 56, height: 56, borderRadius: 18, backgroundColor: colors.primarySoft,
+  guardDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accentGlow },
+  guardText: { fontFamily: fonts.medium, fontSize: font.caption, color: colors.onPrimary },
+  balance: {
+    fontFamily: fonts.extra, fontSize: font.huge + 2, lineHeight: 52, letterSpacing: -1.6, color: colors.onPrimary,
+    fontVariant: ['tabular-nums'], marginTop: space.sm,
+  },
+  currency: { fontFamily: fonts.semibold, color: colors.onPrimarySoft },
+  account: {
+    fontFamily: fonts.regular, fontSize: font.small - 1, letterSpacing: 0.4, color: colors.onPrimarySoft, marginTop: 4,
+  },
+  transfer: {
+    flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: space.lg, minHeight: 84,
+    paddingVertical: space.sm + 2, paddingLeft: space.md + 4, paddingRight: space.sm + 2,
+    borderRadius: 24, backgroundColor: colors.surface,
+  },
+  transferTitle: { fontFamily: fonts.bold, fontSize: font.lead + 1, lineHeight: 28, letterSpacing: -0.4, color: colors.ink },
+  transferHint: { fontFamily: fonts.regular, fontSize: font.small, lineHeight: 22, color: colors.inkSoft },
+  transferArrow: {
+    width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primary,
     alignItems: 'center', justifyContent: 'center',
   },
-  tileIconPrimary: { backgroundColor: 'rgba(255,255,255,0.18)' },
-  tileIconText: { fontSize: 28, fontWeight: '800', color: colors.primary },
-  tileTitle: { fontSize: font.lead + 1, lineHeight: 30, fontWeight: '800', color: colors.ink },
-  tileHint: { fontSize: font.small + 1, lineHeight: 23, color: colors.inkSoft },
-  tileHintAlert: { color: colors.medium, fontWeight: '700' },
-  onPrimary: { color: colors.onPrimary },
-  onPrimarySoft: { color: '#D5E1EE' },
-  chevron: { fontSize: 34, color: colors.inkSoft },
+  list: { backgroundColor: colors.surface, borderRadius: 28, paddingHorizontal: space.md + 2, ...shadow.card },
+  tile: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 92, paddingVertical: space.md },
+  tileTitle: { fontFamily: fonts.bold, fontSize: font.lead - 1, lineHeight: 26, letterSpacing: -0.3, color: colors.ink },
+  tileHint: { fontFamily: fonts.regular, fontSize: font.small, lineHeight: 22, color: colors.inkSoft },
+  tileHintAlert: { fontFamily: fonts.semibold, color: colors.medium },
   badge: {
-    minWidth: 40, height: 40, borderRadius: 20, paddingHorizontal: 10, backgroundColor: colors.medium,
+    minWidth: 36, height: 36, borderRadius: 18, paddingHorizontal: 10, backgroundColor: colors.medium,
     alignItems: 'center', justifyContent: 'center',
   },
-  badgeText: { fontSize: font.body, fontWeight: '800', color: colors.onPrimary },
+  badgeText: { fontFamily: fonts.bold, fontSize: font.body - 1, color: colors.onPrimary },
+  logout: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm, minHeight: 56,
+    alignSelf: 'center', paddingHorizontal: space.lg,
+  },
+  logoutText: { fontFamily: fonts.semibold, fontSize: font.body - 1, color: colors.inkSoft },
 });

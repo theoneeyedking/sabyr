@@ -1,11 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
 
 import type { AssistantResponse, TransferState } from '../api/types';
 import { AssistantChat } from '../components/AssistantChat';
 import { FinalState } from '../components/FinalState';
+import { Icon } from '../components/Icon';
+import { Breathing, Reveal } from '../components/Motion';
 import { RiskGauge } from '../components/RiskGauge';
-import { Body, Button, Card, ErrorNote, Heading, Screen, Title } from '../components/ui';
+import { Body, Button, Caption, Card, ErrorNote, Heading, Screen, Title } from '../components/ui';
 import type { I18nKey } from '../i18n';
 import { cooldownDeadline, formatCountdown, secondsUntil } from '../lib/countdown';
 import { flaggingBanks } from '../lib/ledger';
@@ -14,7 +17,7 @@ import { firstName } from '../lib/risk';
 import { usePolling } from '../lib/usePolling';
 import type { ScreenProps } from '../navigation';
 import { useApp } from '../state/AppContext';
-import { colors, font, levelColor, radius, space } from '../theme';
+import { colors, font, fonts, levelColor, radius, shadow, space } from '../theme';
 
 const FINAL = ['confirmed', 'cancelled', 'declined'];
 
@@ -119,7 +122,7 @@ export function SabyrScreen({ navigation, route }: ScreenProps<'Sabyr'>) {
   return (
     <Screen
       title={t('sabyr.title')} onBack={() => navigation.popToTop()} backLabel={t('common.home')}
-      testID="screen-sabyr"
+      testID="screen-sabyr" glow={tone.vivid} glowStrength={0.3}
       footer={
         <>
           <Button
@@ -133,33 +136,49 @@ export function SabyrScreen({ navigation, route }: ScreenProps<'Sabyr'>) {
         </>
       }
     >
-      <View style={[styles.hero, { backgroundColor: tone.bg }]}>
-        <View style={styles.heroHead}>
+      <Reveal style={styles.hero}>
+        <View style={styles.pauseWrap}>
+          <Breathing color={tone.vivid} size={64} />
           <View style={[styles.pauseIcon, { backgroundColor: tone.fg }]}>
-            <View style={styles.pauseBar} />
-            <View style={styles.pauseBar} />
+            <Icon name="pause" size={30} color={colors.onPrimary} stroke={2.6} />
           </View>
-          <Title style={styles.flex}>{t(high ? 'sabyr.headlineHigh' : 'sabyr.headlineMedium')}</Title>
         </View>
-        <Body>{t(high ? 'sabyr.introHigh' : 'sabyr.introMedium')}</Body>
-      </View>
+        <Title style={styles.headline}>{t(high ? 'sabyr.headlineHigh' : 'sabyr.headlineMedium')}</Title>
+        <Body soft style={styles.intro}>{t(high ? 'sabyr.introHigh' : 'sabyr.introMedium')}</Body>
+      </Reveal>
 
-      <Card>
-        <Text style={styles.caption}>{t('sabyr.transferTo')}</Text>
-        <Text style={styles.amount} testID="sabyr-amount">{formatMoney(transfer.amount)}</Text>
-        <Body style={styles.strong}>{transfer.recipient.name} · {transfer.recipient.bank}</Body>
-        <Body soft style={styles.account}>{formatAccount(transfer.recipient.account)}</Body>
+      <Card index={1}>
+        <Caption>{t('sabyr.transferTo')}</Caption>
+        <Text style={styles.amount} testID="sabyr-amount" adjustsFontSizeToFit numberOfLines={1}>
+          {formatMoney(transfer.amount)}
+        </Text>
+        <View style={styles.recipient}>
+          <View style={styles.recipientAvatar}>
+            <Text style={styles.recipientLetter}>{transfer.recipient.name.slice(0, 1)}</Text>
+          </View>
+          <View style={styles.flex}>
+            <Text style={styles.recipientName}>{transfer.recipient.name} · {transfer.recipient.bank}</Text>
+            <Text style={styles.account}>{formatAccount(transfer.recipient.account)}</Text>
+          </View>
+        </View>
       </Card>
 
       {ledger?.flagged ? (
-        <View style={styles.ledger} testID="ledger-banner">
-          <Text style={styles.ledgerTitle}>{t('sabyr.ledgerFlagged')}</Text>
-          {banks.length ? <Text style={styles.ledgerText}>{t('sabyr.ledgerFlaggedBy', { bank: banks.join(', ') })}</Text> : null}
-          {ledger.status === 'unavailable' ? <Text style={styles.ledgerNote}>{t('sabyr.ledgerUnavailable')}</Text> : null}
-        </View>
+        <Reveal index={2}>
+          <View style={styles.ledger} testID="ledger-banner">
+            <View style={styles.ledgerIcon}>
+              <Icon name="link" size={24} color={colors.onPrimary} />
+            </View>
+            <View style={styles.flex}>
+              <Text style={styles.ledgerTitle}>{t('sabyr.ledgerFlagged')}</Text>
+              {banks.length ? <Text style={styles.ledgerText}>{t('sabyr.ledgerFlaggedBy', { bank: banks.join(', ') })}</Text> : null}
+              {ledger.status === 'unavailable' ? <Text style={styles.ledgerNote}>{t('sabyr.ledgerUnavailable')}</Text> : null}
+            </View>
+          </View>
+        </Reveal>
       ) : null}
 
-      <Card>
+      <Card index={3}>
         <RiskGauge
           score={transfer.risk.score} level={transfer.risk.level}
           senderScore={transfer.risk.sender_score} recipientScore={transfer.risk.recipient_score}
@@ -167,28 +186,38 @@ export function SabyrScreen({ navigation, route }: ScreenProps<'Sabyr'>) {
       </Card>
 
       {transfer.cooldown_until ? (
-        <Card style={styles.cooldown} testID="cooldown">
-          <Heading>{t('sabyr.cooldown')}</Heading>
+        <Card style={styles.cooldown} testID="cooldown" index={4}>
+          <Heading style={styles.center}>{t('sabyr.cooldown')}</Heading>
           {left > 0 ? (
             <>
-              <Text style={styles.timer} testID="cooldown-timer">{formatCountdown(left)}</Text>
-              <Body soft>{t('sabyr.cooldownHint')}</Body>
+              <CooldownRing left={left}>
+                <Text style={styles.timer} testID="cooldown-timer">{formatCountdown(left)}</Text>
+              </CooldownRing>
+              <Body soft style={styles.center}>{t('sabyr.cooldownHint')}</Body>
             </>
           ) : (
-            <Body style={styles.strong} testID="cooldown-done">{t('sabyr.cooldownDone')}</Body>
+            <View style={styles.cooldownDone}>
+              <Icon name="check" size={22} color={colors.accent} stroke={2.4} />
+              <Text style={styles.cooldownDoneText} testID="cooldown-done">{t('sabyr.cooldownDone')}</Text>
+            </View>
           )}
         </Card>
       ) : null}
 
       {req ? (
-        <Card testID="trusted-status">
-          <Heading>{t('sabyr.trusted')}</Heading>
+        <Card testID="trusted-status" index={5}>
+          <Caption>{t('sabyr.trusted')}</Caption>
           <View style={styles.trustedRow}>
-            <View style={[styles.dot, req.status === 'pending' ? styles.dotPending : styles.dotDone]} />
-            <Body style={styles.flex} testID={`trusted-${req.status}`}>
+            <View style={[styles.trustedIcon, req.status === 'pending' ? styles.trustedPending : styles.trustedDone]}>
+              <Icon
+                name={req.status === 'pending' ? 'clock' : req.status === 'approved' ? 'check' : 'shieldCheck'}
+                size={24} color={req.status === 'pending' ? colors.medium : colors.accent}
+              />
+            </View>
+            <Text style={styles.trustedText} testID={`trusted-${req.status}`}>
               {t(req.status === 'pending' ? 'sabyr.trustedPending'
                 : req.status === 'approved' ? 'sabyr.trustedApproved' : 'sabyr.trustedDeclined', { name: trustedName })}
-            </Body>
+            </Text>
           </View>
         </Card>
       ) : client?.trusted_contact ? (
@@ -198,7 +227,7 @@ export function SabyrScreen({ navigation, route }: ScreenProps<'Sabyr'>) {
         />
       ) : null}
 
-      <Card testID="reasons">
+      <Card testID="reasons" index={6}>
         <Heading>{t('sabyr.reasons')}</Heading>
         {transfer.risk.reasons.map((r, i) => (
           <View key={r.code + i} style={styles.reason}>
@@ -211,56 +240,114 @@ export function SabyrScreen({ navigation, route }: ScreenProps<'Sabyr'>) {
       </Card>
 
       {scheme ? (
-        <Card testID="scheme">
-          <Text style={styles.caption}>{t('sabyr.scheme')}</Text>
+        <Card testID="scheme" index={7} style={styles.scheme}>
+          <Caption>{t('sabyr.scheme')}</Caption>
           <Heading>{scheme.title}</Heading>
-          <Text style={styles.caption}>{t('sabyr.schemeHow')}</Text>
-          <Body>{scheme.how}</Body>
+          <View style={[styles.schemeHow, { borderLeftColor: tone.vivid }]}>
+            <Caption>{t('sabyr.schemeHow')}</Caption>
+            <Body>{scheme.how}</Body>
+          </View>
         </Card>
       ) : null}
 
-      <Card>
+      <Card index={7}>
         <AssistantChat transferId={transfer.transfer_id} active={!final} onUpdate={onAssistant} />
       </Card>
 
       <ErrorNote text={error} />
       {!transfer.can_confirm && blockerKey ? (
-        <Body soft style={styles.blocker} testID="blocker">{t(blockerKey)}</Body>
+        <View style={styles.blocker}>
+          <Icon name="lock" size={18} color={colors.inkSoft} />
+          <Text style={styles.blockerText} testID="blocker">{t(blockerKey)}</Text>
+        </View>
       ) : null}
     </Screen>
   );
 }
 
+const RING = 184;
+const RING_R = 82;
+const RING_LEN = 2 * Math.PI * RING_R;
+
+/** Кольцо паузы: убывает вместе с таймером. За полную длину берётся первое увиденное значение. */
+function CooldownRing({ left, children }: { left: number; children: React.ReactNode }) {
+  const total = useRef(left);
+  if (left > total.current) total.current = left;
+  const part = total.current > 0 ? Math.min(1, left / total.current) : 0;
+  return (
+    <View style={styles.ring}>
+      <Svg width={RING} height={RING} viewBox={`0 0 ${RING} ${RING}`}>
+        <Circle cx={RING / 2} cy={RING / 2} r={RING_R} stroke="rgba(15,27,42,0.07)" strokeWidth={10} fill="none" />
+        <Circle
+          cx={RING / 2} cy={RING / 2} r={RING_R} stroke={colors.primary} strokeWidth={10} fill="none"
+          strokeLinecap="round" strokeDasharray={`${RING_LEN * part} ${RING_LEN}`}
+          transform={`rotate(-90 ${RING / 2} ${RING / 2})`}
+        />
+      </Svg>
+      <View style={styles.ringCenter}>{children}</View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  hero: { borderRadius: radius.card, padding: space.md, gap: space.sm },
-  heroHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  center: { textAlign: 'center' },
+  hero: { gap: space.sm, paddingTop: space.xs, paddingBottom: space.sm },
+  pauseWrap: { width: 64, height: 64, alignItems: 'center', justifyContent: 'center', marginBottom: space.sm, marginLeft: 6 },
   pauseIcon: {
-    width: 48, height: 48, borderRadius: 24, flexDirection: 'row', gap: 7,
+    width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center',
+    boxShadow: '0 10px 24px rgba(15,39,66,0.22)',
+  },
+  headline: { fontSize: 34, lineHeight: 39, letterSpacing: -1.3 },
+  intro: { fontSize: font.body + 1, lineHeight: 28 },
+  amount: {
+    fontFamily: fonts.extra, fontSize: font.huge, lineHeight: 50, letterSpacing: -1.4, color: colors.ink,
+    fontVariant: ['tabular-nums'],
+  },
+  recipient: {
+    flexDirection: 'row', alignItems: 'center', gap: space.sm + 2, marginTop: space.xs,
+    padding: space.sm + 2, borderRadius: radius.inner + 2, backgroundColor: colors.surfaceSoft,
+  },
+  recipientAvatar: {
+    width: 46, height: 46, borderRadius: 16, backgroundColor: colors.primarySoft,
     alignItems: 'center', justifyContent: 'center',
   },
-  pauseBar: { width: 7, height: 22, borderRadius: 3, backgroundColor: colors.onPrimary },
-  caption: { fontSize: font.small, lineHeight: 22, color: colors.inkSoft },
-  amount: { fontSize: font.huge - 4, lineHeight: 44, fontWeight: '800', color: colors.ink },
-  strong: { fontWeight: '700' },
-  account: { fontSize: font.small + 1 },
+  recipientLetter: { fontFamily: fonts.bold, fontSize: font.lead, color: colors.primary },
+  recipientName: { fontFamily: fonts.semibold, fontSize: font.body, lineHeight: 25, color: colors.ink },
+  account: { fontFamily: fonts.regular, fontSize: font.small - 1, lineHeight: 21, letterSpacing: 0.3, color: colors.inkSoft },
   ledger: {
-    backgroundColor: colors.primary, borderRadius: radius.card, padding: space.md, gap: 4,
+    flexDirection: 'row', alignItems: 'flex-start', gap: space.md,
+    backgroundColor: colors.primary, borderRadius: radius.card, padding: space.md + 4, ...shadow.raised,
   },
-  ledgerTitle: { fontSize: font.lead - 1, lineHeight: 28, fontWeight: '800', color: colors.onPrimary },
-  ledgerText: { fontSize: font.body - 1, lineHeight: 25, color: '#E3ECF5' },
-  ledgerNote: { fontSize: font.small, lineHeight: 22, color: '#C9D8E8' },
-  cooldown: { alignItems: 'center' },
+  ledgerIcon: {
+    width: 48, height: 48, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.14)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  ledgerTitle: { fontFamily: fonts.bold, fontSize: font.body + 1, lineHeight: 26, letterSpacing: -0.2, color: colors.onPrimary },
+  ledgerText: { fontFamily: fonts.regular, fontSize: font.small + 1, lineHeight: 24, color: colors.onPrimarySoft, marginTop: 2 },
+  ledgerNote: { fontFamily: fonts.regular, fontSize: font.small - 1, lineHeight: 21, color: colors.onPrimarySoft, marginTop: 4 },
+  cooldown: { alignItems: 'center', gap: space.md },
+  ring: { width: RING, height: RING, alignItems: 'center', justifyContent: 'center' },
+  ringCenter: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center' },
   timer: {
-    fontSize: 60, lineHeight: 68, fontWeight: '800', color: colors.primary,
-    fontVariant: ['tabular-nums'], letterSpacing: 1,
+    fontFamily: fonts.extra, fontSize: 44, lineHeight: 52, letterSpacing: -0.5, color: colors.ink,
+    fontVariant: ['tabular-nums'],
   },
-  trustedRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm },
-  dot: { width: 14, height: 14, borderRadius: 7, marginTop: 7 },
-  dotPending: { backgroundColor: colors.medium },
-  dotDone: { backgroundColor: colors.accent },
-  reason: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm },
-  reasonNum: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  reasonNumText: { fontSize: font.body - 1, fontWeight: '800' },
-  blocker: { textAlign: 'center', fontSize: font.small + 1 },
+  cooldownDone: {
+    flexDirection: 'row', alignItems: 'center', gap: space.sm, backgroundColor: colors.accentSoft,
+    borderRadius: radius.chip, paddingHorizontal: space.md + 2, paddingVertical: 10,
+  },
+  cooldownDoneText: { fontFamily: fonts.semibold, fontSize: font.body, color: colors.accent },
+  trustedRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  trustedIcon: { width: 48, height: 48, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  trustedPending: { backgroundColor: colors.mediumSoft },
+  trustedDone: { backgroundColor: colors.accentSoft },
+  trustedText: { flex: 1, fontFamily: fonts.medium, fontSize: font.body, lineHeight: 26, color: colors.ink },
+  reason: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm + 2 },
+  reasonNum: { width: 32, height: 32, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  reasonNumText: { fontFamily: fonts.bold, fontSize: font.small },
+  scheme: { gap: space.sm },
+  schemeHow: { borderLeftWidth: 3, paddingLeft: space.md, gap: 2, marginTop: space.xs },
+  blocker: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm, paddingHorizontal: space.md },
+  blockerText: { flexShrink: 1, fontFamily: fonts.regular, fontSize: font.small, lineHeight: 23, color: colors.inkSoft, textAlign: 'center' },
 });

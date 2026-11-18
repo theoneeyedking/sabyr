@@ -26,6 +26,7 @@ export const ru = {
   'home.trustedPending': 'Вас просят проверить перевод',
   'home.logout': 'Выйти',
   'home.language': 'Язык',
+  'home.protected': 'Sabyr на защите',
 
   'transfer.title': 'Перевод',
   'transfer.recipient': 'Номер счёта получателя',

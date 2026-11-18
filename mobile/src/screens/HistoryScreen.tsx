@@ -1,14 +1,16 @@
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import type { HistoryItem } from '../api/types';
-import { Body, Button, Card, ErrorNote, Loading, Screen } from '../components/ui';
+import { Icon } from '../components/Icon';
+import { PressableScale, Reveal } from '../components/Motion';
+import { Body, Button, Card, ErrorNote, IconBadge, Loading, Pill, Screen } from '../components/ui';
 import { formatDateTime } from '../i18n';
 import { formatMoney } from '../lib/money';
 import type { ScreenProps } from '../navigation';
 import { useApp } from '../state/AppContext';
-import { colors, font, levelColor, radius, space } from '../theme';
+import { colors, font, fonts, levelColor, radius, shadow, space } from '../theme';
 
 /** История переводов. Незавершённый перевод, остановленный Sabyr, можно открыть снова. */
 export function HistoryScreen({ navigation }: ScreenProps<'History'>) {
@@ -52,40 +54,54 @@ export function HistoryScreen({ navigation }: ScreenProps<'History'>) {
       {items == null && !error ? <Loading label={t('common.loading')} /> : null}
       {items != null && items.length === 0 ? <Card><Body soft>{t('history.empty')}</Body></Card> : null}
 
-      {items?.map((item) => {
+      {items?.map((item, index) => {
         const out = item.direction === 'out';
         const done = item.status === 'confirmed';
         const unfinished = out && ['allowed', 'warned', 'cooldown'].includes(item.status);
         const tone = item.risk_level ? levelColor[item.risk_level] : null;
         return (
-          <Pressable
-            key={item.transfer_id} disabled={!unfinished || opening != null} onPress={() => void open(item)}
-            testID="history-item" style={({ pressed }) => [styles.item, pressed && styles.pressed]}
-          >
-            <View style={styles.head}>
-              <Text style={styles.name} numberOfLines={2}>{item.counterparty.name}</Text>
-              {/* Знак и цвет — только у состоявшихся переводов: отменённые деньги со счёта не уходили. */}
-              <Text style={[styles.amount, done && !out && styles.amountIn, !done && styles.amountIdle]}>
-                {done ? (out ? '−' : '+') : ''}{formatMoney(item.amount)}
-              </Text>
-            </View>
-            <Text style={styles.meta}>
-              {t(out ? 'history.out' : 'history.in')} · {formatDateTime(item.created_at)}
-            </Text>
-            <View style={styles.tags}>
-              <View style={[styles.tag, item.status === 'confirmed' ? styles.tagOk : styles.tagNeutral]}>
-                <Text style={[styles.tagText, item.status === 'confirmed' && styles.tagTextOk]}>
-                  {t(`status.${item.status}`)}
+          <Reveal key={item.transfer_id} index={index}>
+            <PressableScale
+              disabled={!unfinished || opening != null} onPress={() => void open(item)}
+              testID="history-item" style={styles.item} scaleTo={0.98}
+            >
+              <View style={styles.head}>
+                {done ? (
+                  <IconBadge
+                    name={out ? 'arrowUpRight' : 'arrowDownLeft'} size={48}
+                    bg={out ? colors.primarySoft : colors.accentSoft} color={out ? colors.primary : colors.accent}
+                  />
+                ) : (
+                  <IconBadge name={unfinished ? 'pause' : 'close'} size={48} bg={colors.disabledBg} color={colors.inkSoft} />
+                )}
+                <View style={styles.flex}>
+                  <Text style={styles.name} numberOfLines={2}>{item.counterparty.name}</Text>
+                  <Text style={styles.meta}>
+                    {t(out ? 'history.out' : 'history.in')} · {formatDateTime(item.created_at)}
+                  </Text>
+                </View>
+                {/* Знак и цвет — только у состоявшихся переводов: отменённые деньги со счёта не уходили. */}
+                <Text style={[styles.amount, done && !out && styles.amountIn, !done && styles.amountIdle]}>
+                  {done ? (out ? '−' : '+') : ''}{formatMoney(item.amount)}
                 </Text>
               </View>
-              {out && item.risk_score != null && tone ? (
-                <View style={[styles.tag, { backgroundColor: tone.bg }]}>
-                  <Text style={[styles.tagText, { color: tone.fg }]}>{t('history.risk', { score: item.risk_score })}</Text>
-                </View>
-              ) : null}
-              {unfinished ? <Text style={styles.open}>{t('history.open')} ›</Text> : null}
-            </View>
-          </Pressable>
+              <View style={styles.tags}>
+                <Pill
+                  label={t(`status.${item.status}`)}
+                  fg={done ? colors.accent : colors.inkSoft} bg={done ? colors.accentSoft : colors.disabledBg}
+                />
+                {out && item.risk_score != null && tone ? (
+                  <Pill label={t('history.risk', { score: item.risk_score })} fg={tone.fg} bg={tone.bg} dot />
+                ) : null}
+                {unfinished ? (
+                  <View style={styles.open}>
+                    <Text style={styles.openText}>{t('history.open')}</Text>
+                    <Icon name="chevronRight" size={18} color={colors.primary} stroke={2.4} />
+                  </View>
+                ) : null}
+              </View>
+            </PressableScale>
+          </Reveal>
         );
       })}
     </Screen>
@@ -93,22 +109,17 @@ export function HistoryScreen({ navigation }: ScreenProps<'History'>) {
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   item: {
-    backgroundColor: colors.surface, borderRadius: radius.card, padding: space.md, gap: 6,
-    borderWidth: 1, borderColor: colors.line,
+    backgroundColor: colors.surface, borderRadius: radius.card, padding: space.md + 2, gap: space.sm + 2, ...shadow.card,
   },
-  pressed: { opacity: 0.8 },
-  head: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: space.sm },
-  name: { flex: 1, fontSize: font.body, lineHeight: 26, fontWeight: '700', color: colors.ink },
-  amount: { fontSize: font.body + 1, lineHeight: 26, fontWeight: '800', color: colors.ink },
+  head: { flexDirection: 'row', alignItems: 'center', gap: space.sm + 2 },
+  name: { fontFamily: fonts.semibold, fontSize: font.body, lineHeight: 24, letterSpacing: -0.2, color: colors.ink },
+  amount: { fontFamily: fonts.bold, fontSize: font.body, lineHeight: 26, color: colors.ink },
   amountIn: { color: colors.accent },
-  amountIdle: { color: colors.inkSoft, fontWeight: '600' },
-  meta: { fontSize: font.small, lineHeight: 22, color: colors.inkSoft },
-  tags: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space.sm, marginTop: 2 },
-  tag: { borderRadius: radius.chip, paddingHorizontal: 12, paddingVertical: 5 },
-  tagOk: { backgroundColor: colors.accentSoft },
-  tagNeutral: { backgroundColor: colors.disabledBg },
-  tagText: { fontSize: font.small - 1, fontWeight: '700', color: colors.inkSoft },
-  tagTextOk: { color: colors.accent },
-  open: { fontSize: font.small + 1, fontWeight: '700', color: colors.primary, marginLeft: 'auto' },
+  amountIdle: { fontFamily: fonts.medium, color: colors.inkFaint },
+  meta: { fontFamily: fonts.regular, fontSize: font.caption + 1, lineHeight: 21, color: colors.inkSoft },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space.sm },
+  open: { flexDirection: 'row', alignItems: 'center', gap: 2, marginLeft: 'auto' },
+  openText: { fontFamily: fonts.semibold, fontSize: font.small, color: colors.primary },
 });
