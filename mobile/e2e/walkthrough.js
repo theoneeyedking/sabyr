@@ -314,7 +314,13 @@ async function main() {
     await g.page.waitForFunction(() => document.querySelector('[data-testid="preview-on-call"]')?.textContent === 'false');
     await tid(g.page, 'fill-friend').click(); // быстрая подстановка счёта из демо-меню
     await tid(g.page, 'screen-transfer').waitFor();
-    check((await top(g.page, 'input-account').inputValue()) === FRIEND, 'демо-меню подставило счёт друга');
+    // счёт подставляется в useEffect уже после появления экрана — ждём значение, а не читаем сразу
+    let filled = '';
+    for (let i = 0; i < 30 && filled !== FRIEND; i++) {
+      filled = await top(g.page, 'input-account').inputValue();
+      if (filled !== FRIEND) await g.page.waitForTimeout(100);
+    }
+    check(filled === FRIEND, 'демо-меню подставило счёт друга', filled);
     await top(g.page, 'input-amount').fill('20000');
     await top(g.page, 'transfer-continue').click();
     await tid(g.page, 'screen-confirm').waitFor();
