@@ -5,6 +5,13 @@ from rest_framework.views import exception_handler as drf_handler
 from intervention.services import InterventionError
 
 
+def parse(schema_serializer, data) -> dict:
+    """Валидирует данные запроса тем же сериализатором, что описан в OpenAPI (400 вместо 500 на мусорный ввод)."""
+    s = schema_serializer.__class__(data=data)
+    s.is_valid(raise_exception=True)
+    return s.validated_data
+
+
 def lang_of(request) -> str:
     """Язык ответа: ?lang= / Accept-Language, иначе язык клиента."""
     explicit = request.query_params.get("lang") or request.headers.get("Accept-Language", "")[:2].lower()

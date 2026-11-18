@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from bank.models import Client
 from intervention import services
 from intervention.schemes import scheme_info
-from sabyr.api import lang_of
+from sabyr.api import lang_of, parse
 
 from .models import TrustedContact, TrustedRequest
 
@@ -39,26 +39,24 @@ _RequestOut = inline_serializer("TrustedRequestOut", {
 @extend_schema(summary="Запросить подтверждение у доверенного лица", tags=["trusted"],
                description="При риске > 70 запрос создаётся автоматически; этот вызов идемпотентен и нужен, "
                            "чтобы клиент мог сам попросить помощи при среднем риске.",
-               request=inline_serializer("TrustedRequestIn", {"transfer_id": serializers.UUIDField()}),
+               request=(_TrustedRequestIn := inline_serializer("TrustedRequestIn", {"transfer_id": serializers.UUIDField()})),
                responses=_RequestOut)
 @api_view(["POST"])
 def create_request(request):
-    req = services.create_trusted_request(request.user, request.data.get("transfer_id"))
+    req = services.create_trusted_request(request.user, parse(_TrustedRequestIn, request.data)["transfer_id"])
     return Response(request_json(req, lang_of(request)))
 
 
 @extend_schema(summary="Ответ доверенного лица: подтвердить или отклонить", tags=["trusted"],
                description="decline — перевод отменяется, запись уходит в реестр, счёт получателя помечается как дроп.",
-               request=inline_serializer("TrustedRespondIn", {
+               request=(_TrustedRespondIn := inline_serializer("TrustedRespondIn", {
                    "request_id": serializers.IntegerField(),
-                   "decision": serializers.ChoiceField(choices=["approve", "decline"])}),
+                   "decision": serializers.ChoiceField(choices=["approve", "decline"])})),
                responses=_RequestOut)
 @api_view(["POST"])
 def respond(request):
-    decision = request.data.get("decision")
-    if decision not in ("approve", "decline"):
-        raise services.InterventionError("bad_decision", "decision: approve | decline", status=400)
-    req = services.trusted_respond(request.user, request.data.get("request_id"), decision)
+    data = parse(_TrustedRespondIn, request.data)
+    req = services.trusted_respond(request.user, data["request_id"], data["decision"])
     return Response(request_json(req, lang_of(request)))
 
 
@@ -75,8 +73,8 @@ def incoming(request):
 
 @extend_schema(summary="Моё доверенное лицо", tags=["trusted"], methods=["GET"], responses={200: OpenApiTypes.OBJECT})
 @extend_schema(summary="Привязать доверенное лицо по номеру телефона", tags=["trusted"], methods=["PUT"],
-               request=inline_serializer("TrustedContactIn", {"phone": serializers.CharField(),
-                                                             "relation": serializers.CharField(required=False)}),
+               request=(_ContactIn := inline_serializer("TrustedContactIn", {"phone": serializers.CharField(max_length=32),
+                                                             "relation": serializers.CharField(required=False, allow_blank=True, max_length=64)})),
                responses={200: OpenApiTypes.OBJECT})
 @extend_schema(summary="Отвязать доверенное лицо", tags=["trusted"], methods=["DELETE"], responses={204: None})
 @api_view(["GET", "PUT", "DELETE"])
@@ -85,10 +83,11 @@ def contact(request):
         TrustedContact.objects.filter(client=request.user).delete()
         return Response(status=204)
     if request.method == "PUT":
-        trusted = Client.objects.filter(phone=request.data.get("phone", "")).first()
+        data = parse(_ContactIn, request.data)
+        trusted = Client.objects.filter(phone=data["phone"]).first()
         if trusted is None or trusted.id == request.user.id:
             raise services.InterventionError("trusted_not_found", "Клиент с таким номером не найден", status=404)
         TrustedContact.objects.update_or_create(
-            client=request.user, defaults={"trusted": trusted, "relation": request.data.get("relation", "")})
+            client=request.user, defaults={"trusted": trusted, "relation": data.get("relation", "")})
     c = TrustedContact.objects.select_related("trusted").filter(client=request.user).first()
     return Response({"contact": {"name": c.trusted.full_name, "phone": c.trusted.phone, "relation": c.relation} if c else None})

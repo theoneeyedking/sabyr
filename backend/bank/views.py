@@ -8,6 +8,8 @@ from rest_framework.response import Response
 
 from trusted.models import TrustedContact
 
+from sabyr.api import parse
+
 from .models import Client, Transfer
 
 
@@ -37,13 +39,13 @@ def demo_users(request):
 
 @extend_schema(summary="Вход демо-пользователем", tags=["auth"], auth=[],
                description="Демо-упрощение: настоящая аутентификация остаётся за мобильным банком.",
-               request=inline_serializer("LoginRequest", {"client_id": serializers.IntegerField()}),
+               request=(_LoginIn := inline_serializer("LoginRequest", {"client_id": serializers.IntegerField()})),
                responses=inline_serializer("LoginResponse", {"token": serializers.CharField(), "client": serializers.DictField()}))
 @api_view(["POST"])
 @authentication_classes([])
 @permission_classes([AllowAny])
 def login(request):
-    c = Client.objects.select_related("bank").filter(id=request.data.get("client_id"), is_demo=True).first()
+    c = Client.objects.select_related("bank").filter(id=parse(_LoginIn, request.data)["client_id"], is_demo=True).first()
     if c is None:
         return Response({"error": {"code": "unknown_user", "message": "Демо-пользователь не найден"}}, status=404)
     return Response({"token": c.api_token, "client": client_json(c)})
@@ -70,7 +72,10 @@ def me(request):
 @api_view(["GET"])
 def history(request):
     acc = request.user.main_account
-    limit = min(int(request.query_params.get("limit", 30)), 100)
+    try:
+        limit = max(1, min(int(request.query_params.get("limit", 30)), 100))
+    except (TypeError, ValueError):
+        return Response({"error": {"code": "bad_limit", "message": "limit — целое число от 1 до 100"}}, status=400)
     qs = (Transfer.objects.select_related("sender_account__owner", "recipient_account__owner")
           .filter(Q(sender_account=acc) | Q(recipient_account=acc, status=Transfer.Status.CONFIRMED))
           .order_by("-created_at")[:limit])

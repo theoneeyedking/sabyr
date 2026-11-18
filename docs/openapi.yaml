@@ -871,8 +871,10 @@ components:
       properties:
         phone:
           type: string
+          maxLength: 32
         relation:
           type: string
+          maxLength: 64
       required:
       - phone
     TrustedIncoming:
