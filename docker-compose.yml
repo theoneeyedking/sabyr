@@ -20,7 +20,7 @@ services:
       timeout: 3s
       retries: 20
     ports:
-      - "5432:5432"
+      - "127.0.0.1:${DB_PORT:-5432}:5432"   # БД доступна только с этой машины
 
   backend:
     build:
@@ -31,7 +31,7 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      - "${API_PORT:-8000}:8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 5s
@@ -50,7 +50,7 @@ services:
       - ./ledger/network/fabric-samples/test-network/organizations:/crypto:ro
     networks: [default, fabric]
     ports:
-      - "8090:8090"   # http://localhost:8090 — «Обозреватель реестра»
+      - "${LEDGER_PORT:-8090}:8090"   # http://localhost:8090 — «Обозреватель реестра»
     restart: unless-stopped
 
   llm:

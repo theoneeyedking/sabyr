@@ -118,4 +118,12 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except requests.ConnectionError as e:
+        url = getattr(e.request, "url", "") or ""
+        what = "шлюз реестра (обозреватель)" if ":8090" in url or "/events" in url else "backend"
+        print(f"\n   ✗ нет связи: {what} не отвечает ({url})\n"
+              "     Поднимите стенд: make demo (реестр и backend) или docker compose up -d (только backend).",
+              file=sys.stderr)
+        sys.exit(2)

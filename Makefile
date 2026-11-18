@@ -2,7 +2,7 @@
 COMPOSE ?= docker compose
 PY ?= .venv/bin/python
 
-.PHONY: demo demo-check up down seed ledger-up ledger-down test test-ml test-backend test-chaincode train openapi logs
+.PHONY: demo demo-reset demo-check up down seed ledger-up ledger-down test test-ml test-backend test-chaincode train openapi logs
 
 demo: .env ledger-up ## Всё для демо одной командой
 	$(COMPOSE) --profile ledger up -d --build
@@ -12,6 +12,13 @@ demo: .env ledger-up ## Всё для демо одной командой
 	@echo "  API и Swagger          http://localhost:8000/api/docs"
 	@echo "  Обозреватель реестра   http://localhost:8090"
 	@echo "  Мобильное приложение   cd mobile && npm install && npx expo start"
+
+demo-reset: .env ## Чистый лист для повторного показа: новый реестр Fabric и свежие данные
+	$(COMPOSE) --profile ledger stop ledger-gateway
+	./ledger/network/down.sh
+	./ledger/network/up.sh
+	$(COMPOSE) --profile ledger up -d --force-recreate ledger-gateway
+	$(MAKE) seed
 
 demo-check: ## Сценарий демо по HTTP против запущенного стенда
 	$(PY) scripts/demo_check.py
