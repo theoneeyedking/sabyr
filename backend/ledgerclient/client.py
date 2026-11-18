@@ -15,13 +15,15 @@ class LedgerUnavailable(Exception):
 
 
 class LedgerClient:
-    def __init__(self, base_url: str, timeout: float):
+    def __init__(self, base_url: str, timeout: float, token: str = ""):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        self.token = token
 
     def _call(self, method: str, path: str, bank: str, json: dict | None = None):
         try:
-            r = requests.request(method, f"{self.base_url}{path}", json=json, headers={"X-Bank": bank},
+            r = requests.request(method, f"{self.base_url}{path}", json=json,
+                                 headers={"X-Bank": bank, "Authorization": f"Bearer {self.token}"},
                                  timeout=self.timeout)
         except requests.RequestException as e:
             raise LedgerUnavailable(str(e)) from e
@@ -55,7 +57,7 @@ def get_ledger() -> LedgerClient | None:
         return _override
     if not settings.LEDGER_GATEWAY_URL:
         return None
-    return LedgerClient(settings.LEDGER_GATEWAY_URL, settings.LEDGER_TIMEOUT_SECONDS)
+    return LedgerClient(settings.LEDGER_GATEWAY_URL, settings.LEDGER_TIMEOUT_SECONDS, settings.LEDGER_GATEWAY_TOKEN)
 
 
 def set_ledger_override(client) -> None:

@@ -8,6 +8,7 @@ package main
 
 import (
 	"context"
+	"crypto/subtle"
 	"crypto/x509"
 	_ "embed"
 	"encoding/json"
@@ -206,6 +207,20 @@ func fabricError(err error) string {
 	return msg
 }
 
+// requireToken пропускает запрос, только если в нём есть `Authorization: Bearer <token>`.
+func requireToken(token string) func(http.HandlerFunc) http.HandlerFunc {
+	want := []byte("Bearer " + token)
+	return func(next http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			if subtle.ConstantTimeCompare([]byte(r.Header.Get("Authorization")), want) != 1 {
+				writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "нужен заголовок Authorization: Bearer <LEDGER_GATEWAY_TOKEN>"})
+				return
+			}
+			next(w, r)
+		}
+	}
+}
+
 func (s *server) bankOf(w http.ResponseWriter, r *http.Request) *bank {
 	b, ok := s.banks[strings.ToUpper(r.Header.Get("X-Bank"))]
 	if !ok {
@@ -342,11 +357,19 @@ func main() {
 	s := &server{banks: map[string]*bank{"A": a, "B": b}, hub: &hub{subs: map[chan ledgerEvent]struct{}{}}}
 	go s.hub.listen(context.Background(), a)
 
+	// Методы реестра доступны только backend банка: общий секрет в заголовке Authorization.
+	// Обозреватель (/, /events) и /health открыты — там только хэши и события блоков.
+	token := os.Getenv("LEDGER_GATEWAY_TOKEN")
+	if token == "" {
+		log.Fatal("LEDGER_GATEWAY_TOKEN не задан: без него любой мог бы писать в реестр от имени банков")
+	}
+	auth := requireToken(token)
+
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /flags", s.flags)
-	mux.HandleFunc("GET /flags/{hash}", s.getFlags)
-	mux.HandleFunc("POST /warnings", s.warnings)
-	mux.HandleFunc("GET /warnings/{hash}", s.getWarning)
+	mux.HandleFunc("POST /flags", auth(s.flags))
+	mux.HandleFunc("GET /flags/{hash}", auth(s.getFlags))
+	mux.HandleFunc("POST /warnings", auth(s.warnings))
+	mux.HandleFunc("GET /warnings/{hash}", auth(s.getWarning))
 	mux.HandleFunc("GET /events", s.events)
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "channel": env("CHANNEL", "sabyr"),

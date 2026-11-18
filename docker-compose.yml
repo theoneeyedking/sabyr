@@ -45,6 +45,7 @@ services:
       CRYPTO_PATH: /crypto
       CHANNEL: sabyr
       CHAINCODE: sabyr
+      LEDGER_GATEWAY_TOKEN: ${LEDGER_GATEWAY_TOKEN:?задайте LEDGER_GATEWAY_TOKEN в .env}
     volumes:
       - ./ledger/network/fabric-samples/test-network/organizations:/crypto:ro
     networks: [default, fabric]

@@ -90,6 +90,7 @@ SABYR = {
 
 LEDGER_SALT = os.environ.get("LEDGER_SALT", "dev-salt")
 LEDGER_GATEWAY_URL = os.environ.get("LEDGER_GATEWAY_URL", "")
+LEDGER_GATEWAY_TOKEN = os.environ.get("LEDGER_GATEWAY_TOKEN", "")
 LEDGER_TIMEOUT_SECONDS = float(os.environ.get("LEDGER_TIMEOUT_SECONDS", "8"))
 # В тестах запись в реестр выполняется синхронно, в проде — в фоновом потоке после коммита.
 LEDGER_SYNC = env_bool("LEDGER_SYNC", False)
