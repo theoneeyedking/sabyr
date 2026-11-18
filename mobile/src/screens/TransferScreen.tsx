@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Icon } from '../components/Icon';
-import { Reveal } from '../components/Motion';
+import { PressableScale, Reveal } from '../components/Motion';
 import { Button, Caption, ErrorNote, Screen } from '../components/ui';
 import { formatAmountInput, formatMoney, normalizeAccount, parseAmountInput } from '../lib/money';
+import { recentRecipients, type Recipient } from '../lib/protection';
 import type { ScreenProps } from '../navigation';
 import { useApp } from '../state/AppContext';
 import { colors, font, fonts, radius, shadow, space, noOutline } from '../theme';
@@ -17,6 +18,14 @@ export function TransferScreen({ navigation }: ScreenProps<'Transfer'>) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [focus, setFocus] = useState<'account' | 'amount' | null>(null);
+  const [recent, setRecent] = useState<Recipient[]>([]);
+
+  // Недавние получатели: пожилому человеку проще нажать на имя, чем набирать номер счёта.
+  useEffect(() => {
+    let alive = true;
+    api.history(100).then((items) => { if (alive) setRecent(recentRecipients(items)); }).catch(() => undefined);
+    return () => { alive = false; };
+  }, [api]);
 
   // Счёт, выбранный в демо-меню, подставляется в форму один раз.
   useEffect(() => {
@@ -82,6 +91,29 @@ export function TransferScreen({ navigation }: ScreenProps<'Transfer'>) {
         />
       </Reveal>
 
+      {recent.length > 0 ? (
+        <Reveal index={2} style={styles.recent}>
+          <Caption style={styles.recentTitle}>{t('transfer.recent')}</Caption>
+          <View style={styles.recentRow}>
+            {recent.map((r) => {
+              const active = normalizeAccount(account) === r.account;
+              return (
+                <PressableScale
+                  key={r.account} onPress={() => setAccount(r.account)} testID="recent-recipient"
+                  accessibilityRole="button" accessibilityLabel={r.name} scaleTo={0.96}
+                  style={[styles.chip, active && styles.chipActive]}
+                >
+                  <View style={[styles.chipAvatar, active && styles.chipAvatarActive]}>
+                    <Text style={[styles.chipLetter, active && styles.chipLetterActive]}>{r.name.slice(0, 1)}</Text>
+                  </View>
+                  <Text style={styles.chipName} numberOfLines={1}>{r.name}</Text>
+                </PressableScale>
+              );
+            })}
+          </View>
+        </Reveal>
+      ) : null}
+
       {demo.onCall || demo.screenShare ? (
         <Reveal index={2} style={styles.signals}>
           <View testID="signals-note" style={styles.signalsInner}>
@@ -123,6 +155,21 @@ const styles = StyleSheet.create({
   },
   currency: { fontFamily: fonts.bold, fontSize: font.title + 4, color: colors.inkFaint },
   hint: { fontFamily: fonts.regular, fontSize: font.small, lineHeight: 22, color: colors.inkSoft },
+  recent: { gap: space.sm },
+  recentTitle: { fontSize: font.small, marginLeft: 4 },
+  recentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: 56, paddingLeft: 8, paddingRight: space.md,
+    borderRadius: 28, backgroundColor: colors.surface, borderWidth: 2, borderColor: 'transparent', ...shadow.card,
+  },
+  chipActive: { borderColor: colors.primary },
+  chipAvatar: {
+    width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center',
+  },
+  chipAvatarActive: { backgroundColor: colors.primary },
+  chipLetter: { fontFamily: fonts.bold, fontSize: font.body, color: colors.primary },
+  chipLetterActive: { color: colors.onPrimary },
+  chipName: { fontFamily: fonts.semibold, fontSize: font.small + 1, color: colors.ink, maxWidth: 190 },
   signals: { backgroundColor: colors.primarySoft, borderRadius: radius.button, padding: space.md },
   signalsInner: { gap: space.sm },
   signal: { flexDirection: 'row', alignItems: 'center', gap: space.sm },

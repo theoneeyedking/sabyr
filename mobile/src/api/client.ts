@@ -80,7 +80,8 @@ export function createApi(cfg: ApiConfig) {
       request<{ token: string; client: Client }>(cfg, 'POST', '/api/auth/login', { client_id: clientId }),
     me: () => request<Client>(cfg, 'GET', '/api/me'),
     setLang: (lang: Lang) => request<Client>(cfg, 'PATCH', '/api/me', { lang }),
-    history: () => request<{ items: HistoryItem[] }>(cfg, 'GET', '/api/transfers/history').then((r) => r.items),
+    history: (limit = 30) =>
+      request<{ items: HistoryItem[] }>(cfg, 'GET', `/api/transfers/history?limit=${limit}`).then((r) => r.items),
     check: (recipientAccount: string, amount: number, signals: TransferSignals) =>
       request<TransferState>(cfg, 'POST', '/api/transfers/check', {
         recipient_account: recipientAccount, amount: String(amount), signals,

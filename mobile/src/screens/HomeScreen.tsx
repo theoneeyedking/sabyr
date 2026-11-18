@@ -6,9 +6,10 @@ import Svg, { Circle, Defs, LinearGradient, RadialGradient, Rect, Stop } from 'r
 import { LangSwitch } from '../components/LangSwitch';
 import { Logo } from '../components/Logo';
 import { Icon, type IconName } from '../components/Icon';
-import { PressableScale, Reveal, useSvgId } from '../components/Motion';
+import { Breathing, PressableScale, Reveal, useSvgId } from '../components/Motion';
 import { Divider, IconBadge, Screen } from '../components/ui';
 import { formatAccount, formatMoney } from '../lib/money';
+import { protectionStats, type ProtectionStats } from '../lib/protection';
 import { firstName } from '../lib/risk';
 import { usePolling } from '../lib/usePolling';
 import type { ScreenProps } from '../navigation';
@@ -20,11 +21,14 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
   const { api, client, refreshMe, logout, t, describeError } = useApp();
   const focused = useIsFocused();
   const [pending, setPending] = useState(0);
+  const [stats, setStats] = useState<ProtectionStats | null>(null);
 
   // Баланс обновляется при каждом возврате на главную.
   useFocusEffect(useCallback(() => {
     refreshMe().catch((e) => describeError(e));
-  }, [refreshMe, describeError]));
+    // Что Sabyr уже сделал для клиента — из его же истории; при ошибке карточка просто не показывает цифры.
+    api.history(100).then((items) => setStats(protectionStats(items))).catch(() => setStats(null));
+  }, [refreshMe, describeError, api]));
 
   // Входящие просьбы доверенному лицу — опрос раз в 3 секунды, пока экран открыт.
   usePolling(async () => {
@@ -83,6 +87,47 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
       </Reveal>
 
       <Reveal index={2}>
+        <View style={styles.guardCard} testID="protection-card">
+          <View style={styles.guardHead}>
+            <View style={styles.guardHalo}>
+              <Breathing color={colors.accentGlow} size={44} />
+              <View style={styles.guardIcon}>
+                <Icon name="shieldCheck" size={26} color={colors.onPrimary} stroke={2.2} />
+              </View>
+            </View>
+            {stats && stats.saved > 0 ? (
+              <View style={styles.flex}>
+                <Text style={styles.guardLabel}>{t('home.savedLabel')}</Text>
+                <Text style={styles.guardSaved} testID="protection-saved" adjustsFontSizeToFit numberOfLines={1}>
+                  {formatMoney(stats.saved)}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.flex}>
+                <Text style={styles.guardTitle}>{t('home.guardTitle')}</Text>
+                <Text style={styles.guardHint}>{t('home.guardHint')}</Text>
+              </View>
+            )}
+          </View>
+          {stats && stats.checked > 0 ? (
+            <View style={styles.stats}>
+              <View style={styles.stat}>
+                <Text style={styles.statValue} testID="protection-checked">{stats.checked}</Text>
+                <Text style={styles.statLabel}>{t('home.statChecked')}</Text>
+              </View>
+              <View style={styles.statLine} />
+              <View style={styles.stat}>
+                <Text style={[styles.statValue, stats.stopped > 0 && styles.statValueAccent]} testID="protection-stopped">
+                  {stats.stopped}
+                </Text>
+                <Text style={styles.statLabel}>{t('home.statStopped')}</Text>
+              </View>
+            </View>
+          ) : null}
+        </View>
+      </Reveal>
+
+      <Reveal index={3}>
         <View style={styles.list}>
           <Tile
             icon="clock" title={t('home.history')} hint={t('home.historyHint')} testID="tile-history"
@@ -194,6 +239,30 @@ const styles = StyleSheet.create({
     width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primary,
     alignItems: 'center', justifyContent: 'center',
   },
+  guardCard: {
+    backgroundColor: colors.surface, borderRadius: 28, padding: space.md + 4, gap: space.md, ...shadow.card,
+  },
+  guardHead: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  guardHalo: { width: 64, height: 64, alignItems: 'center', justifyContent: 'center' },
+  guardIcon: {
+    width: 52, height: 52, borderRadius: 26, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center',
+  },
+  guardLabel: { fontFamily: fonts.medium, fontSize: font.small, lineHeight: 22, color: colors.inkSoft },
+  guardSaved: {
+    fontFamily: fonts.extra, fontSize: font.title + 4, lineHeight: 38, letterSpacing: -1, color: colors.accent,
+    fontVariant: ['tabular-nums'],
+  },
+  guardTitle: { fontFamily: fonts.bold, fontSize: font.body + 1, lineHeight: 25, letterSpacing: -0.3, color: colors.ink },
+  guardHint: { fontFamily: fonts.regular, fontSize: font.small, lineHeight: 22, color: colors.inkSoft },
+  stats: {
+    flexDirection: 'row', alignItems: 'stretch', backgroundColor: colors.surfaceSoft, borderRadius: 20,
+    paddingVertical: space.sm + 4,
+  },
+  stat: { flex: 1, alignItems: 'center', gap: 2, paddingHorizontal: space.sm },
+  statLine: { width: 1, backgroundColor: colors.lineStrong },
+  statValue: { fontFamily: fonts.extra, fontSize: font.title - 2, lineHeight: 32, color: colors.ink, fontVariant: ['tabular-nums'] },
+  statValueAccent: { color: colors.accent },
+  statLabel: { fontFamily: fonts.medium, fontSize: font.caption, lineHeight: 19, color: colors.inkSoft, textAlign: 'center' },
   list: { backgroundColor: colors.surface, borderRadius: 28, paddingHorizontal: space.md + 2, ...shadow.card },
   tile: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 92, paddingVertical: space.md },
   tileTitle: { fontFamily: fonts.bold, fontSize: font.lead - 1, lineHeight: 26, letterSpacing: -0.3, color: colors.ink },

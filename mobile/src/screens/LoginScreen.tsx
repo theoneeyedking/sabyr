@@ -96,9 +96,28 @@ export function LoginScreen({ navigation }: ScreenProps<'Login'>) {
           </View>
         </Reveal>
       ) : null}
+
+      {users && users.length > 0 ? (
+        <Reveal index={2} style={styles.features}>
+          {FEATURES.map((f) => (
+            <View key={f.key} style={styles.feature}>
+              <View style={styles.featureIcon}>
+                <Icon name={f.icon} size={22} color={colors.primary} stroke={2.2} />
+              </View>
+              <Text style={styles.featureText}>{t(f.key)}</Text>
+            </View>
+          ))}
+        </Reveal>
+      ) : null}
     </Screen>
   );
 }
+
+const FEATURES = [
+  { key: 'login.feature1', icon: 'pause' },
+  { key: 'login.feature2', icon: 'spark' },
+  { key: 'login.feature3', icon: 'users' },
+] as const;
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
@@ -112,6 +131,12 @@ const styles = StyleSheet.create({
   list: { backgroundColor: colors.surface, borderRadius: 28, paddingHorizontal: space.md + 2, ...shadow.card },
   user: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 88, paddingVertical: space.md },
   userBusy: { opacity: 0.55 },
+  features: { gap: space.sm + 2, marginTop: space.md, paddingHorizontal: 4 },
+  feature: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  featureIcon: {
+    width: 44, height: 44, borderRadius: 15, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center',
+  },
+  featureText: { flex: 1, fontFamily: fonts.medium, fontSize: font.small + 1, lineHeight: 24, color: colors.inkSoft },
   avatar: { width: 54, height: 54, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontFamily: fonts.bold, fontSize: font.lead + 1 },
   name: { fontFamily: fonts.semibold, fontSize: font.body + 1, lineHeight: 26, letterSpacing: -0.2, color: colors.ink },

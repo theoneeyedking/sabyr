@@ -188,8 +188,20 @@ export function SabyrScreen({ navigation, route }: ScreenProps<'Sabyr'>) {
         />
       </Card>
 
+      <Card testID="reasons" index={4}>
+        <Heading>{t('sabyr.reasons')}</Heading>
+        {transfer.risk.reasons.map((r, i) => (
+          <View key={r.code + i} style={styles.reason}>
+            <View style={[styles.reasonNum, { backgroundColor: tone.bg }]}>
+              <Text style={[styles.reasonNumText, { color: tone.fg }]}>{i + 1}</Text>
+            </View>
+            <Body style={styles.flex} testID="reason">{r.text}</Body>
+          </View>
+        ))}
+      </Card>
+
       {transfer.cooldown_until ? (
-        <Card style={styles.cooldown} testID="cooldown" index={4}>
+        <Card style={styles.cooldown} testID="cooldown" index={5}>
           <Heading style={styles.center}>{t('sabyr.cooldown')}</Heading>
           {left > 0 ? (
             <>
@@ -208,7 +220,7 @@ export function SabyrScreen({ navigation, route }: ScreenProps<'Sabyr'>) {
       ) : null}
 
       {req ? (
-        <Card testID="trusted-status" index={5}>
+        <Card testID="trusted-status" index={6}>
           <Caption>{t('sabyr.trusted')}</Caption>
           <View style={styles.trustedRow}>
             <View style={[styles.trustedIcon, req.status === 'pending' ? styles.trustedPending : styles.trustedDone]}>
@@ -229,18 +241,6 @@ export function SabyrScreen({ navigation, route }: ScreenProps<'Sabyr'>) {
           onPress={() => void askTrusted()} loading={busy === 'ask'} disabled={busy != null} testID="trusted-ask"
         />
       ) : null}
-
-      <Card testID="reasons" index={6}>
-        <Heading>{t('sabyr.reasons')}</Heading>
-        {transfer.risk.reasons.map((r, i) => (
-          <View key={r.code + i} style={styles.reason}>
-            <View style={[styles.reasonNum, { backgroundColor: tone.bg }]}>
-              <Text style={[styles.reasonNumText, { color: tone.fg }]}>{i + 1}</Text>
-            </View>
-            <Body style={styles.flex} testID="reason">{r.text}</Body>
-          </View>
-        ))}
-      </Card>
 
       {scheme ? (
         <Card testID="scheme" index={7} style={styles.scheme}>

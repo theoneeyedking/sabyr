@@ -6,7 +6,8 @@ import type { HistoryItem } from '../api/types';
 import { Icon } from '../components/Icon';
 import { PressableScale, Reveal } from '../components/Motion';
 import { Body, Button, Card, ErrorNote, IconBadge, Loading, Pill, Screen } from '../components/ui';
-import { formatDateTime } from '../i18n';
+import { formatDay, formatTime } from '../i18n';
+import { groupByDay } from '../lib/protection';
 import { formatMoney } from '../lib/money';
 import type { ScreenProps } from '../navigation';
 import { useApp } from '../state/AppContext';
@@ -14,7 +15,7 @@ import { colors, font, fonts, levelColor, radius, shadow, space } from '../theme
 
 /** История переводов. Незавершённый перевод, остановленный Sabyr, можно открыть снова. */
 export function HistoryScreen({ navigation }: ScreenProps<'History'>) {
-  const { api, t, describeError } = useApp();
+  const { api, t, lang, describeError } = useApp();
   const [items, setItems] = useState<HistoryItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
@@ -54,13 +55,20 @@ export function HistoryScreen({ navigation }: ScreenProps<'History'>) {
       {items == null && !error ? <Loading label={t('common.loading')} /> : null}
       {items != null && items.length === 0 ? <Card><Body soft>{t('history.empty')}</Body></Card> : null}
 
-      {items?.map((item, index) => {
+      {groupByDay(items ?? []).map((group, groupIndex) => (
+        <View key={group.key} style={styles.group}>
+          <Reveal index={groupIndex}>
+            <Text style={styles.day} testID="history-day">
+              {group.kind === 'today' ? t('history.today') : group.kind === 'yesterday' ? t('history.yesterday') : formatDay(lang, group.date)}
+            </Text>
+          </Reveal>
+          {group.items.map((item, index) => {
         const out = item.direction === 'out';
         const done = item.status === 'confirmed';
         const unfinished = out && ['allowed', 'warned', 'cooldown'].includes(item.status);
         const tone = item.risk_level ? levelColor[item.risk_level] : null;
         return (
-          <Reveal key={item.transfer_id} index={index}>
+          <Reveal key={item.transfer_id} index={groupIndex + index}>
             <PressableScale
               disabled={!unfinished || opening != null} onPress={() => void open(item)}
               testID="history-item" style={styles.item} scaleTo={0.98}
@@ -77,7 +85,7 @@ export function HistoryScreen({ navigation }: ScreenProps<'History'>) {
                 <View style={styles.flex}>
                   <Text style={styles.name} numberOfLines={2}>{item.counterparty.name}</Text>
                   <Text style={styles.meta}>
-                    {t(out ? 'history.out' : 'history.in')} · {formatDateTime(item.created_at)}
+                    {t(out ? 'history.out' : 'history.in')} · {formatTime(item.created_at)}
                   </Text>
                 </View>
                 {/* Знак и цвет — только у состоявшихся переводов: отменённые деньги со счёта не уходили. */}
@@ -103,13 +111,20 @@ export function HistoryScreen({ navigation }: ScreenProps<'History'>) {
             </PressableScale>
           </Reveal>
         );
-      })}
+          })}
+        </View>
+      ))}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  group: { gap: space.sm + 2 },
+  day: {
+    fontFamily: fonts.bold, fontSize: font.body, lineHeight: 24, letterSpacing: -0.2, color: colors.ink,
+    marginLeft: 4, marginTop: space.xs,
+  },
   item: {
     backgroundColor: colors.surface, borderRadius: radius.card, padding: space.md + 2, gap: space.sm + 2, ...shadow.card,
   },
