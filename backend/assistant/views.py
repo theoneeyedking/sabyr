@@ -28,6 +28,10 @@ _Message = inline_serializer("AssistantChatMessage", {
         "turn": serializers.IntegerField(), "max_turns": serializers.IntegerField(), "done": serializers.BooleanField(),
         "provider": serializers.ChoiceField(choices=["anthropic", "own", "static"]),
         "degraded": serializers.BooleanField(), "degraded_reason": serializers.CharField(allow_blank=True),
+        "guard": inline_serializer("AssistantGuard", {
+            "input_flagged": serializers.BooleanField(help_text="Реплика клиента похожа на prompt injection и в LLM не отправлена"),
+            "output_blocked": serializers.BooleanField(help_text="Ответ LLM не прошёл проверку и заменён согласованным текстом"),
+            "flags": serializers.ListField(child=serializers.CharField())}),
         "can_confirm": serializers.BooleanField()}))
 @api_view(["POST"])
 def message(request):

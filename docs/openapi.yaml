@@ -441,6 +441,23 @@ components:
       - created_at
       - role
       - text
+    AssistantGuard:
+      type: object
+      properties:
+        input_flagged:
+          type: boolean
+          description: Реплика клиента похожа на prompt injection и в LLM не отправлена
+        output_blocked:
+          type: boolean
+          description: Ответ LLM не прошёл проверку и заменён согласованным текстом
+        flags:
+          type: array
+          items:
+            type: string
+      required:
+      - flags
+      - input_flagged
+      - output_blocked
     AssistantMessageIn:
       type: object
       properties:
@@ -478,6 +495,8 @@ components:
           type: boolean
         degraded_reason:
           type: string
+        guard:
+          $ref: '#/components/schemas/AssistantGuard'
         can_confirm:
           type: boolean
       required:
@@ -485,6 +504,7 @@ components:
       - degraded
       - degraded_reason
       - done
+      - guard
       - max_turns
       - messages
       - provider
