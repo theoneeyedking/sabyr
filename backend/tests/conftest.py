@@ -47,6 +47,13 @@ class FakeLedger:
         return [v for call in self.calls if call[0] in ("flag", "warning") for v in call[2:]]
 
 
+@pytest.fixture(autouse=True)
+def no_live_llm(settings):
+    """Тесты никогда не ходят в настоящий LLM API, даже если ключ есть в окружении."""
+    settings.LLM_API_KEY = ""
+    settings.OWN_LLM_URL = "http://127.0.0.1:9/v1"
+
+
 @pytest.fixture(scope="session")
 def django_db_setup(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():

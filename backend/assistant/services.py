@@ -30,6 +30,9 @@ def _generate(transfer: Transfer, lang: str, history: list[dict], turn: int) -> 
     except LLMUnavailable as e:
         log.warning("LLM недоступна, отвечаю статическим текстом: %s", e)
         return static_reply(transfer.scheme, lang, turn), "static", str(e)
+    except Exception as e:  # защитный диалог не должен падать из-за неожиданной ошибки провайдера
+        log.exception("неожиданная ошибка LLM, отвечаю статическим текстом")
+        return static_reply(transfer.scheme, lang, turn), "static", f"ошибка LLM: {type(e).__name__}"
 
 
 @transaction.atomic

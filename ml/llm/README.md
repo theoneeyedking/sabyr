@@ -35,7 +35,7 @@ SABYR_ADAPTER_DIR=llm/out/sabyr-assistant uvicorn llm.serve:app --host 0.0.0.0 -
 
 # 4. Оценка на отложенных диалогах -> docs/llm_eval_own.json
 python -m llm.evaluate --target own --endpoint http://localhost:8001/v1
-python -m llm.evaluate --target api      # для сравнения: внешний API, нужен ANTHROPIC_API_KEY
+python -m llm.evaluate --target api      # для сравнения: внешний API, нужен LLM_API_KEY
 ```
 
 Подключение к backend — в `.env`:

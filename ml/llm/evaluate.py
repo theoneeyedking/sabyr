@@ -6,7 +6,7 @@
 
     python -m llm.evaluate --target references                     # самопроверка эталонных диалогов
     python -m llm.evaluate --target own --endpoint http://localhost:8001/v1
-    python -m llm.evaluate --target api                            # внешний LLM API (ANTHROPIC_API_KEY)
+    python -m llm.evaluate --target api                            # внешний LLM API (LLM_API_KEY)
 """
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ def own_generator(endpoint: str, model: str):
 def api_generator(model: str):
     import anthropic
 
-    client = anthropic.Anthropic()
+    client = anthropic.Anthropic(api_key=os.environ.get("LLM_API_KEY") or None)  # None — стандартный поиск ключа SDK
 
     def generate(messages: list[dict]) -> str:
         response = client.beta.messages.create(
@@ -97,7 +97,7 @@ def main() -> None:
     elif args.target == "own":
         generate = own_generator(args.endpoint, args.model or "sabyr-assistant")
     else:
-        generate = api_generator(args.model or os.environ.get("ANTHROPIC_MODEL") or "claude-opus-5-5")
+        generate = api_generator(args.model or os.environ.get("LLM_MODEL") or "claude-opus-5-5")
     result = {"target": args.target, "dialogs": len(rows), **evaluate(rows, generate)}
     args.out.mkdir(parents=True, exist_ok=True)
     path = args.out / f"llm_eval_{args.target}.json"

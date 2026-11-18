@@ -94,8 +94,13 @@ LEDGER_TIMEOUT_SECONDS = float(os.environ.get("LEDGER_TIMEOUT_SECONDS", "8"))
 # В тестах запись в реестр выполняется синхронно, в проде — в фоновом потоке после коммита.
 LEDGER_SYNC = env_bool("LEDGER_SYNC", False)
 
-LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "api")
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "")
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "anthropic")
+LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
+LLM_MODEL = os.environ.get("LLM_MODEL", "")
+# Один запрос к LLM: таймаут × (повторы + 1) должен быть заметно меньше таймаута мобильного клиента (20 с)
+LLM_TIMEOUT_SECONDS = float(os.environ.get("LLM_TIMEOUT_SECONDS", "6"))
+LLM_MAX_RETRIES = int(os.environ.get("LLM_MAX_RETRIES", "1"))
+# Причины риска переформулирует LLM (с проверкой фактов); 0 — только шаблоны
+LLM_REASONS = env_bool("LLM_REASONS", True)
 OWN_LLM_URL = os.environ.get("OWN_LLM_URL", "http://llm:8001/v1")
 OWN_LLM_MODEL = os.environ.get("OWN_LLM_MODEL", "sabyr-assistant")

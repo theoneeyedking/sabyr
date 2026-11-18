@@ -27,6 +27,8 @@ class ReasonSerializer(serializers.Serializer):
     text = serializers.CharField(help_text="На языке клиента")
     ru = serializers.CharField()
     kz = serializers.CharField()
+    source = serializers.ChoiceField(choices=["llm", "partial", "template"],
+                                     help_text="llm — текст переписан LLM и прошёл проверку фактов; template — шаблон")
 
 
 class SchemeSerializer(serializers.Serializer):

@@ -675,13 +675,13 @@ components:
           $ref: '#/components/schemas/LangEnum'
     ProviderEnum:
       enum:
+      - anthropic
       - own
-      - api
       - static
       type: string
       description: |-
+        * `anthropic` - anthropic
         * `own` - own
-        * `api` - api
         * `static` - static
     Reason:
       type: object
@@ -695,10 +695,20 @@ components:
           type: string
         kz:
           type: string
+        source:
+          allOf:
+          - $ref: '#/components/schemas/SourceEnum'
+          description: |-
+            llm — текст переписан LLM и прошёл проверку фактов; template — шаблон
+
+            * `llm` - llm
+            * `partial` - partial
+            * `template` - template
       required:
       - code
       - kz
       - ru
+      - source
       - text
     Risk:
       type: object
@@ -773,6 +783,16 @@ components:
           type: string
           description: native — сигнал от устройства, demo — из демо-меню
           maxLength: 16
+    SourceEnum:
+      enum:
+      - llm
+      - partial
+      - template
+      type: string
+      description: |-
+        * `llm` - llm
+        * `partial` - partial
+        * `template` - template
     TransferState:
       type: object
       properties:

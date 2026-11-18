@@ -18,7 +18,7 @@ export type Client = {
   trusted_for: string[];
 };
 
-export type Reason = { code: string; text: string; ru?: string; kz?: string };
+export type Reason = { code: string; text: string; ru?: string; kz?: string; source?: 'llm' | 'partial' | 'template' };
 export type Scheme = { code: string; title: string; how: string };
 export type Recipient = { account: string; name: string; bank: string };
 export type TrustedRequestBrief = { id: number; status: 'pending' | 'approved' | 'declined'; trusted_name: string };
@@ -97,7 +97,7 @@ export type AssistantResponse = {
   turn: number;
   max_turns: number;
   done: boolean;
-  provider: 'api' | 'own' | 'static' | string;
+  provider: 'anthropic' | 'own' | 'static' | string;
   degraded: boolean;
   can_confirm: boolean;
 };

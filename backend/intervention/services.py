@@ -14,6 +14,7 @@ from django.db import transaction
 from django.db.models import F as DbF
 from django.utils import timezone
 
+from assistant.reasons import humanize as humanize_reasons
 from bank.models import Account, Client, Transfer
 from ledgerclient import service as ledger
 from risk import services as risk
@@ -68,11 +69,15 @@ def check_transfer(client: Client, recipient_number: str, amount: Decimal, signa
         if known and ("LEDGER_FLAG_FLOOR" in result.rules or scheme == "unknown"):
             scheme = known[-1]
 
+    # Причины человеческим языком: LLM переписывает шаблоны, проверка не даёт выдумать факты.
+    # Вызывается до транзакции, чтобы не держать блокировки БД, пока ждём LLM.
+    reasons = humanize_reasons(result.reasons, scheme, amount, result.level) if result.level != "low" else result.reasons
+
     with transaction.atomic():
         transfer = Transfer.objects.create(
             sender_account=sender, recipient_account=recipient, amount=amount, created_at=now,
             status=STATUS_BY_LEVEL[result.level], signals=signals,
-            risk_score=result.score, risk_level=result.level, reasons=result.reasons, scheme=scheme,
+            risk_score=result.score, risk_level=result.level, reasons=reasons, scheme=scheme,
             features={k: (None if v != v else v) for k, v in feats.items()} | {
                 "_sender_score": result.sender_score, "_recipient_score": result.recipient_score,
                 "_model_score": result.model_score, "_rules": result.rules},
@@ -214,7 +219,8 @@ def present_transfer(transfer: Transfer, lang: str, ledger_info: dict | None = N
             "level": transfer.risk_level,
             "sender_score": transfer.features.get("_sender_score"),
             "recipient_score": transfer.features.get("_recipient_score"),
-            "reasons": [{"code": r["code"], "text": r[lang], "ru": r["ru"], "kz": r["kz"]} for r in transfer.reasons],
+            "reasons": [{"code": r["code"], "text": r[lang], "ru": r["ru"], "kz": r["kz"],
+                         "source": r.get("source", "template")} for r in transfer.reasons],
             "scheme": scheme_info(transfer.scheme, lang) if transfer.risk_level != "low" else None,
         },
         "action": ACTION_BY_LEVEL.get(transfer.risk_level, "allow"),

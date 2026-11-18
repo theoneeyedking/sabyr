@@ -34,7 +34,7 @@ down: ## Остановить всё
 
 .env:
 	cp .env.example .env
-	@echo "Создан .env из .env.example — поменяйте пароли и добавьте ANTHROPIC_API_KEY"
+	@echo "Создан .env из .env.example — поменяйте пароли и добавьте LLM_API_KEY"
 
 test: test-ml test-backend test-chaincode ## Все тесты
 

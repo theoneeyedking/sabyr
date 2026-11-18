@@ -26,7 +26,7 @@ _Message = inline_serializer("AssistantChatMessage", {
         "transfer_id": serializers.UUIDField(), "messages": serializers.ListField(child=_Message),
         "reply": inline_serializer("AssistantReply", {"role": serializers.CharField(), "text": serializers.CharField()}, allow_null=True),
         "turn": serializers.IntegerField(), "max_turns": serializers.IntegerField(), "done": serializers.BooleanField(),
-        "provider": serializers.ChoiceField(choices=["own", "api", "static"]),
+        "provider": serializers.ChoiceField(choices=["anthropic", "own", "static"]),
         "degraded": serializers.BooleanField(), "degraded_reason": serializers.CharField(allow_blank=True),
         "can_confirm": serializers.BooleanField()}))
 @api_view(["POST"])

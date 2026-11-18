@@ -3,21 +3,24 @@ import pytest
 from django.test import override_settings
 
 from assistant import providers
-from assistant.providers import ApiProvider, LLMProvider, LLMUnavailable, OwnProvider
+from assistant.providers import AnthropicProvider, LLMProvider, LLMUnavailable, OwnProvider
 from bank.management.commands.seed_demo import DROP_ACCOUNT
 
 from .conftest import CALL
 
 
 class ScriptedProvider(LLMProvider):
-    name = "api"
+    name = "anthropic"
 
     def __init__(self, fail=False):
-        self.calls, self.fail = [], fail
+        self.calls, self.reason_calls, self.fail = [], [], fail
 
-    def generate(self, system, messages):
+    def generate(self, system, messages, *, json_schema=None, **kwargs):
         if self.fail:
             raise LLMUnavailable("тест: модель выключена")
+        if json_schema is not None:          # запрос на причины риска: отвечаем мусором -> шаблоны
+            self.reason_calls.append((system, messages))
+            return "не json"
         self.calls.append((system, messages))
         return f"реплика {len(self.calls)}"
 
@@ -39,7 +42,7 @@ def start(api, amount="1500000"):
 def test_dialog_flow_and_prompt(gulnara, ledger, llm):
     tid = start(gulnara)
     r = gulnara.post("/api/assistant/message", {"transfer_id": tid}, format="json").json()
-    assert r["reply"]["text"] == "реплика 1" and r["turn"] == 1 and r["done"] is False and r["provider"] == "api"
+    assert r["reply"]["text"] == "реплика 1" and r["turn"] == 1 and r["done"] is False and r["provider"] == "anthropic"
     assert r["degraded"] is False
     system, messages = llm.calls[0]
     # язык клиента — казахский; в промпте схема, сумма и причины
@@ -96,10 +99,12 @@ def test_not_available_for_low_risk_or_foreign_transfer(gulnara, aidos, ledger, 
 def test_provider_switch_by_env():
     with override_settings(LLM_PROVIDER="own", OWN_LLM_URL="http://llm:8001/v1"):
         assert isinstance(providers.get_provider(), OwnProvider)
-    with override_settings(LLM_PROVIDER="api", ANTHROPIC_API_KEY="test-key"):
-        assert isinstance(providers.get_provider(), ApiProvider)
-    with override_settings(LLM_PROVIDER="api", ANTHROPIC_API_KEY=""):
-        with pytest.raises(LLMUnavailable, match="ANTHROPIC_API_KEY"):
+    with override_settings(LLM_PROVIDER="anthropic", LLM_API_KEY="test-key"):
+        assert isinstance(providers.get_provider(), AnthropicProvider)
+    with override_settings(LLM_PROVIDER="api", LLM_API_KEY="test-key"):      # старое имя провайдера
+        assert isinstance(providers.get_provider(), AnthropicProvider)
+    with override_settings(LLM_PROVIDER="anthropic", LLM_API_KEY=""):
+        with pytest.raises(LLMUnavailable, match="LLM_API_KEY"):
             providers.get_provider()
     with override_settings(LLM_PROVIDER="gpt"):
         with pytest.raises(LLMUnavailable, match="неизвестный"):
@@ -115,8 +120,8 @@ def test_api_provider_request_shape(monkeypatch):
         captured.update(kwargs)
         return SimpleNamespace(stop_reason="end_turn", content=[SimpleNamespace(type="thinking", thinking=""),
                                                                  SimpleNamespace(type="text", text=" Сәлеметсіз бе! ")])
-    with override_settings(LLM_PROVIDER="api", ANTHROPIC_API_KEY="test-key", ANTHROPIC_MODEL=""):
-        p = ApiProvider()
+    with override_settings(LLM_PROVIDER="anthropic", LLM_API_KEY="test-key", LLM_MODEL=""):
+        p = AnthropicProvider()
         monkeypatch.setattr(p.client.beta.messages, "create", fake_create)
         assert p.generate("system", [{"role": "user", "content": "hi"}]) == "Сәлеметсіз бе!"
         assert captured["model"] == "claude-opus-5-5" and captured["system"] == "system"
