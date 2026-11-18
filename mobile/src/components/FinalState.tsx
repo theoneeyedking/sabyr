@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { TransferState } from '../api/types';
@@ -8,11 +8,17 @@ import { useApp } from '../state/AppContext';
 import { colors, font, fonts, radius, space } from '../theme';
 import { Icon } from './Icon';
 import { Breathing, Reveal } from './Motion';
-import { Body, Caption, Card, Heading, Title } from './ui';
+import { Body, Button, Caption, Card, ErrorNote, Heading, Title } from './ui';
 
 /** Итог перевода: выполнен, отменён клиентом или отклонён доверенным лицом. */
-export function FinalState({ transfer }: { transfer: TransferState }) {
+export function FinalState({ transfer, onReport }: {
+  transfer: TransferState;
+  /** Сообщить о мошенничестве по отменённому переводу; если не задано, блок не показывается. */
+  onReport?: () => Promise<void>;
+}) {
   const { t } = useApp();
+  const [reporting, setReporting] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
   const status = transfer.status;
   const trustedName = firstName(transfer.trusted_request?.trusted_name);
 
@@ -32,6 +38,22 @@ export function FinalState({ transfer }: { transfer: TransferState }) {
   const protectedMoney = status === 'declined' || status === 'cancelled';
   const showAdvice = protectedMoney && transfer.risk.level !== 'low';
   const tint = good ? colors.accent : colors.primary;
+  const reported = !!transfer.fraud_reported;
+  // отклонённый доверенным лицом перевод уже отмечен; для отменённого клиент решает сам
+  const canReport = status === 'cancelled' && transfer.risk.level !== 'low' && !reported && !!onReport;
+
+  const report = async () => {
+    if (!onReport) return;
+    setReporting(true);
+    setReportError(null);
+    try {
+      await onReport();
+    } catch {
+      setReportError(t('error.network'));
+    } finally {
+      setReporting(false);
+    }
+  };
 
   return (
     <View style={styles.wrap} testID={`final-${status}`}>
@@ -51,6 +73,30 @@ export function FinalState({ transfer }: { transfer: TransferState }) {
         <Reveal index={2} style={styles.amountBox}>
           <Icon name="lock" size={22} color={colors.accent} stroke={2.2} />
           <Text style={styles.amount}>{formatMoney(transfer.amount)}</Text>
+        </Reveal>
+      ) : null}
+      {canReport ? (
+        <Reveal index={3} style={styles.advice}>
+          <Card>
+            <Heading style={styles.adviceText}>{t('final.reportTitle')}</Heading>
+            <Body soft>{t('final.reportText')}</Body>
+            <ErrorNote text={reportError} />
+            <Button
+              label={t('final.reportButton')} variant="secondary" onPress={() => void report()}
+              loading={reporting} testID="final-report"
+            />
+          </Card>
+        </Reveal>
+      ) : null}
+      {reported && status === 'cancelled' ? (
+        <Reveal index={3} style={styles.advice}>
+          <Card>
+            <View style={styles.reportedRow} testID="final-reported">
+              <Icon name="shieldCheck" size={26} color={colors.accent} stroke={2.2} />
+              <Heading style={[styles.adviceText, styles.flex]}>{t('final.reportedTitle')}</Heading>
+            </View>
+            <Body soft>{t('final.reportedText')}</Body>
+          </Card>
         </Reveal>
       ) : null}
       {showAdvice ? (
@@ -83,5 +129,7 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   advice: { alignSelf: 'stretch', width: '100%' },
+  reportedRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  flex: { flex: 1 },
   adviceText: { fontFamily: fonts.semibold, fontSize: font.body, lineHeight: 27, letterSpacing: 0 },
 });

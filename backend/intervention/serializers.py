@@ -58,6 +58,7 @@ class TransferStateSerializer(serializers.Serializer):
     cooldown_seconds_left = serializers.IntegerField()
     trusted_request = serializers.DictField(allow_null=True)
     assistant_turns = serializers.IntegerField()
+    fraud_reported = serializers.BooleanField(help_text="Счёт получателя отмечен в реестре по этому переводу")
     can_confirm = serializers.BooleanField()
     blockers = serializers.ListField(child=serializers.DictField())
     ledger = serializers.DictField(required=False, help_text="Только в ответе /transfers/check")

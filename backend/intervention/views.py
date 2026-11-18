@@ -1,4 +1,5 @@
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, inline_serializer
+from rest_framework import serializers
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
@@ -8,6 +9,10 @@ from sabyr.api import lang_of
 from . import services
 from .serializers import (CheckRequestSerializer, ConfirmRequestSerializer, ErrorSerializer,
                           TransferStateSerializer)
+
+
+class _ReportSerializer(serializers.Serializer):
+    transfer_id = serializers.UUIDField()
 
 
 @extend_schema(
@@ -51,4 +56,19 @@ def transfer_state(request, transfer_id):
                 .filter(id=transfer_id, sender_account__owner=request.user).first())
     if transfer is None:
         raise services.InterventionError("transfer_not_found", "Перевод не найден", status=404)
+    return Response(services.present_transfer(transfer, lang_of(request)))
+
+
+@extend_schema(
+    summary="Сообщить о мошенничестве после отмены перевода",
+    description="Клиент отменил перевод и подтверждает, что его пытались обмануть. Счёт получателя помечается в "
+                "межбанковском реестре, ответ клиента фиксируется. Доступно только для своего отменённого перевода, "
+                "по которому было предупреждение; повторный вызов безопасен.",
+    request=inline_serializer("ReportFraudIn", {"transfer_id": serializers.UUIDField()}),
+    responses={200: TransferStateSerializer, 400: ErrorSerializer, 409: ErrorSerializer}, tags=["transfers"])
+@api_view(["POST"])
+def report(request):
+    s = _ReportSerializer(data=request.data)
+    s.is_valid(raise_exception=True)
+    transfer = services.report_fraud(request.user, s.validated_data["transfer_id"])
     return Response(services.present_transfer(transfer, lang_of(request)))

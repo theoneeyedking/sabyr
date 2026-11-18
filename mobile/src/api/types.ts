@@ -56,6 +56,8 @@ export type TransferState = {
   can_confirm: boolean;
   blockers: Blocker[];
   ledger?: LedgerInfo;
+  /** Счёт получателя отмечен в реестре по этому переводу. */
+  fraud_reported?: boolean;
 };
 
 export type HistoryItem = {

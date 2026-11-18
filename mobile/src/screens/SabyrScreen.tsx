@@ -107,7 +107,10 @@ export function SabyrScreen({ navigation, route }: ScreenProps<'Sabyr'>) {
         testID="screen-sabyr"
         footer={<Button label={t('common.home')} onPress={() => navigation.popToTop()} testID="final-home" />}
       >
-        <FinalState transfer={transfer} />
+        <FinalState
+          transfer={transfer}
+          onReport={async () => accept(await api.reportFraud(transfer.transfer_id))}
+        />
       </Screen>
     );
   }

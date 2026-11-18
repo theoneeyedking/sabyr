@@ -88,6 +88,8 @@ export function createApi(cfg: ApiConfig) {
     transfer: (id: string) => request<TransferState>(cfg, 'GET', `/api/transfers/${id}`),
     confirm: (id: string, decision: 'confirm' | 'cancel') =>
       request<TransferState>(cfg, 'POST', '/api/transfers/confirm', { transfer_id: id, decision }),
+    reportFraud: (id: string) =>
+      request<TransferState>(cfg, 'POST', '/api/transfers/report', { transfer_id: id }),
     incoming: () => request<{ items: IncomingRequest[] }>(cfg, 'GET', '/api/trusted/incoming').then((r) => r.items),
     respond: (requestId: number, decision: 'approve' | 'decline') =>
       request<IncomingRequest>(cfg, 'POST', '/api/trusted/respond', { request_id: requestId, decision }),

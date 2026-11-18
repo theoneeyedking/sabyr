@@ -104,6 +104,34 @@ def _execute(transfer: Transfer) -> None:
     risk.apply_transfer(transfer)
 
 
+def _flag_as_reported(transfer: Transfer) -> None:
+    ledger.record_warning(transfer, ledger.REPORTED)
+    ledger.flag_account(transfer, transfer.scheme if transfer.scheme in SCHEMES else "unknown")
+    transfer.features = {**transfer.features, "_fraud_reported": True}
+    transfer.save(update_fields=["features"])
+
+
+@transaction.atomic
+def report_fraud(client: Client, transfer_id) -> Transfer:
+    """Клиент после отмены сообщает, что его пытались обмануть: счёт получателя помечается в реестре.
+
+    Доступно только для своего отменённого перевода, по которому Sabyr показывал предупреждение, —
+    так отметку нельзя поставить произвольному счёту «в отместку». Повторный вызов ничего не меняет.
+    """
+    transfer = (Transfer.objects.select_for_update().select_related("sender_account", "recipient_account")
+                .filter(id=transfer_id, sender_account__owner=client).first())
+    if transfer is None:
+        raise InterventionError("transfer_not_found", "Перевод не найден", status=404)
+    if transfer.risk_level == "low":
+        raise InterventionError("not_available", "По этому переводу предупреждения не было", status=400)
+    if transfer.status == Transfer.Status.DECLINED or transfer.features.get("_fraud_reported"):
+        return transfer   # счёт уже отмечен
+    if transfer.status != Transfer.Status.CANCELLED:
+        raise InterventionError("not_cancelled", "Сначала отмените перевод", status=409)
+    _flag_as_reported(transfer)
+    return transfer
+
+
 def assistant_turns(transfer: Transfer) -> int:
     return transfer.assistant_messages.filter(role="assistant").count()
 
@@ -146,7 +174,7 @@ def confirm_transfer(client: Client, transfer_id, decision: str, report_fraud: b
         if warned:
             ledger.record_warning(transfer, ledger.CANCELLED)
             if report_fraud:  # клиент сам сообщил, что его обманывали
-                ledger.flag_account(transfer, transfer.scheme if transfer.scheme in SCHEMES else "unknown")
+                _flag_as_reported(transfer)
         return transfer
 
     blockers = confirm_blockers(transfer)
@@ -229,6 +257,7 @@ def present_transfer(transfer: Transfer, lang: str, ledger_info: dict | None = N
         if transfer.cooldown_until else 0,
         "trusted_request": {"id": req.id, "status": req.status, "trusted_name": req.trusted.full_name} if req else None,
         "assistant_turns": assistant_turns(transfer),
+        "fraud_reported": transfer.status == Transfer.Status.DECLINED or bool(transfer.features.get("_fraud_reported")),
         "can_confirm": (not transfer.is_final) and not confirm_blockers(transfer),
         "blockers": [] if transfer.is_final else confirm_blockers(transfer),
     }

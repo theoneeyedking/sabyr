@@ -140,3 +140,26 @@ def test_trusted_contact_management(aidos, daniyar, ledger, fixed_score):
     r = aidos.post("/api/trusted/request", {"transfer_id": body["transfer_id"]}, format="json")
     assert r.status_code == 200 and r.json()["status"] == "pending"   # …но клиент может попросить помощи
     assert aidos.delete("/api/trusted/contact").status_code == 204
+
+
+def test_report_fraud_after_cancel_flags_account_once(gulnara, aidos, ledger, fixed_score):
+    fixed_score(60, scheme="fake_shop")
+    body = check(gulnara)
+    tid = body["transfer_id"]
+    assert body["fraud_reported"] is False
+    # пока перевод не отменён, сообщить нельзя
+    assert gulnara.post("/api/transfers/report", {"transfer_id": tid}, format="json").status_code == 409
+    gulnara.post("/api/transfers/confirm", {"transfer_id": tid, "decision": "cancel"}, format="json")
+    assert not ledger.flags
+    r = gulnara.post("/api/transfers/report", {"transfer_id": tid}, format="json")
+    assert r.status_code == 200 and r.json()["fraud_reported"] is True
+    gulnara.post("/api/transfers/report", {"transfer_id": tid}, format="json")          # повтор ничего не добавляет
+    assert [f["reason"] for flags in ledger.flags.values() for f in flags] == ["fake_shop"]
+    assert len(next(iter(ledger.warnings.values()))["entries"]) == 3                    # показано, отменено, сообщено
+    # чужой перевод и перевод без предупреждения — нельзя
+    assert aidos.post("/api/transfers/report", {"transfer_id": tid}, format="json").status_code == 404
+    assert gulnara.post("/api/transfers/report", {"transfer_id": "мусор"}, format="json").status_code == 400
+    fixed_score(5)
+    low = check(gulnara)
+    gulnara.post("/api/transfers/confirm", {"transfer_id": low["transfer_id"], "decision": "cancel"}, format="json")
+    assert gulnara.post("/api/transfers/report", {"transfer_id": low["transfer_id"]}, format="json").status_code == 400
