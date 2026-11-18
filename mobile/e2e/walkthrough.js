@@ -8,8 +8,8 @@
 //   E2E_API_URL   адрес API (по умолчанию http://localhost:8001)
 //   E2E_APP_URL   адрес уже запущенного приложения; если не задан — скрипт сам раздаёт dist/
 //   E2E_SHOTS     каталог для скриншотов (по умолчанию ../docs/screenshots)
-//   E2E_MOCK_ASSISTANT=1|0  принудительно включить/выключить заглушку помощника
-//                 (по умолчанию заглушка включается сама, если /api/assistant/message не отвечает)
+//   E2E_MOCK_ASSISTANT=1  подменять помощника заглушкой (только явно; по умолчанию — настоящий сервис,
+//                 а если он не отвечает, прогон останавливается с ошибкой)
 const fs = require('fs');
 const http = require('http');
 const path = require('path');
@@ -210,8 +210,11 @@ async function main() {
     served = await serveDist();
     appUrl = served.url;
   }
-  const live = await assistantIsLive();
-  const mock = process.env.E2E_MOCK_ASSISTANT ? process.env.E2E_MOCK_ASSISTANT === '1' : !live;
+  const mock = process.env.E2E_MOCK_ASSISTANT === '1';
+  if (!mock && !(await assistantIsLive())) {
+    throw new Error('Помощник (/api/assistant/message) не отвечает. Поднимите backend или запустите с E2E_MOCK_ASSISTANT=1 — '
+      + 'тогда скриншоты чата будут с заглушкой, и это нельзя выдавать за работу LLM.');
+  }
   console.log(`Приложение: ${appUrl}\nAPI: ${API}\nПомощник: ${mock ? 'ЗАГЛУШКА (перехват запросов в браузере)' : 'настоящий сервис'}`);
 
   const browser = await chromium.launch();
