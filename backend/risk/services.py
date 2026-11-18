@@ -117,3 +117,62 @@ def rebuild_passports(flagged_account_ids: set[int] | None = None) -> dict:
                            graph=graphs.get(bank_id, {}).get(acc, {}))
          for (bank_id, acc), state in states.items()], batch_size=2000)
     return {"passports": len(states), "transfers": sum(1 for e in events if e[1] == 1)}
+
+
+# --------------------------------------------------------------------------- граф: обновление без полного пересчёта
+def _flagged_account_ids() -> set[int]:
+    from ledgerclient.models import KnownFlag  # импорт здесь: ledgerclient сам использует risk
+
+    return set(KnownFlag.objects.exclude(account=None).values_list("account_id", flat=True))
+
+
+def refresh_graph() -> dict:
+    """Пересчитывает только графовые признаки (степень, PageRank, близость к дропам) по текущей истории.
+
+    Счётчики паспортов не трогает — они и так обновляются при каждом переводе. Запускается по расписанию
+    (`manage.py refresh_graph`, например раз в час) и после загрузки новых отметок реестра.
+    """
+    from django.db.models import Count
+
+    bank_of = dict(Account.objects.values_list("id", "bank_id"))
+    edges: dict[str, list[tuple]] = {}
+    rows = (Transfer.objects.filter(status=Transfer.Status.CONFIRMED)
+            .values_list("sender_account_id", "recipient_account_id").annotate(n=Count("id")))
+    for a, b, n in rows:
+        for bank_id in {bank_of[a], bank_of[b]}:
+            edges.setdefault(bank_id, []).append((a, b, n))
+    flagged = _flagged_account_ids()
+    updated = 0
+    for bank_id, bank_edges in edges.items():
+        feats = graph_features(build_graph(bank_edges), flagged)
+        passports = list(RecipientPassport.objects.filter(viewer_bank_id=bank_id))
+        known = {p.account_id for p in passports}
+        for p in passports:
+            p.graph = feats.get(p.account_id, {})
+        RecipientPassport.objects.bulk_update(passports, ["graph"], batch_size=2000)
+        # счёт уже есть в графе, но паспорта ещё нет (например, только что отмечен чужим банком)
+        RecipientPassport.objects.bulk_create(
+            [RecipientPassport(viewer_bank_id=bank_id, account_id=acc, state=F.new_passport_state(), graph=g)
+             for acc, g in feats.items() if acc not in known], batch_size=2000)
+        updated += len(feats)
+    return {"graph_nodes": updated, "flagged_accounts": len(flagged)}
+
+
+@transaction.atomic
+def mark_drop(account: Account) -> int:
+    """Счёт только что отмечен как дроп: сразу обновляет «близость к дропу» у него и его соседей по переводам.
+
+    Полный пересчёт графа ждать не нужно — следующий перевод на связанный счёт уже увидит признак.
+    Возвращает число обновлённых паспортов.
+    """
+    done = Transfer.Status.CONFIRMED
+    senders = set(Transfer.objects.filter(recipient_account=account, status=done).values_list("sender_account_id", flat=True))
+    receivers = set(Transfer.objects.filter(sender_account=account, status=done).values_list("recipient_account_id", flat=True))
+    updated = 0
+    for p in RecipientPassport.objects.select_for_update().filter(account_id__in=senders | receivers | {account.id}):
+        new = 0.0 if p.account_id == account.id else 1.0
+        if float(p.graph.get("dist_to_drop", F.GRAPH_FAR)) > new:
+            p.graph = {**p.graph, "dist_to_drop": new}
+            p.save(update_fields=["graph", "updated_at"])
+            updated += 1
+    return updated

@@ -26,6 +26,12 @@ TRUSTED_DECLINED = "DECLINED_BY_TRUSTED_PERSON"
 TRUSTED_APPROVED = "APPROVED_BY_TRUSTED_PERSON"
 
 
+def _mark_drop(account: Account) -> None:
+    from risk.services import mark_drop  # импорт здесь: risk сам использует ledgerclient
+
+    mark_drop(account)
+
+
 def lookup_flags(bank_id: str, account: Account) -> dict:
     """Отметки по счёту из реестра. Никогда не бросает исключение: недоступность реестра не должна
     ломать перевод, но статус честно возвращается вызывающему (ok / unavailable / disabled)."""
@@ -43,9 +49,11 @@ def lookup_flags(bank_id: str, account: Account) -> dict:
     bank_names = dict(Bank.objects.values_list("msp_id", "name"))
     for f in flags:
         f["bank_name"] = bank_names.get(f.get("bankId", ""), f.get("bankId", ""))  # «Банк А» вместо Org1MSP
-        KnownFlag.objects.update_or_create(
+        _, created = KnownFlag.objects.update_or_create(
             account_hash=acc_hash, bank_id_code=f.get("bankId", ""), reason=f.get("reason", ""),
             defaults={"account": account, "flagged_at": parse_datetime(f.get("timestamp", "")) or timezone.now()})
+        if created:
+            _mark_drop(account)   # новая отметка из реестра: соседи счёта по переводам сразу становятся «близкими к дропу»
     return {"status": "ok", "account_hash": acc_hash, "flags": flags}
 
 
@@ -166,4 +174,5 @@ def flag_account(transfer: Transfer, reason: str) -> None:
     KnownFlag.objects.update_or_create(
         account_hash=acc_hash, bank_id_code=bank_id, reason=reason,
         defaults={"account": account, "flagged_at": timezone.now()})
+    _mark_drop(account)
     _enqueue("flag_account", bank_id, {"account_hash": acc_hash, "reason": reason})

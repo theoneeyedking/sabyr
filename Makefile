@@ -59,6 +59,9 @@ train: ## Сгенерировать синтетику и обучить мод
 	rm -f ml/data/frame.parquet
 	$(PY) -m sabyr_ml.train
 
+refresh-graph: ## Пересчитать графовые признаки (можно по расписанию)
+	$(COMPOSE) exec -T backend python manage.py refresh_graph
+
 openapi:
 	cd backend && ../$(PY) manage.py spectacular --file ../docs/openapi.yaml
 
