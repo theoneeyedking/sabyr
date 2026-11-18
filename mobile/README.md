@@ -155,3 +155,9 @@ src/screens/               Вход, Главная, Перевод, Подтв�
 modules/sabyr-signals/     нативный модуль Android (Kotlin) и обёртка на TypeScript
 e2e/walkthrough.js         сквозной прогон демо-сценария
 ```
+
+## Веб-версия на Vercel
+
+Конфиг — [vercel.json](vercel.json): сборка `expo export --platform web`, раздаётся `dist/` (SPA).
+Деплой: `cd mobile && npx vercel deploy --prod`. На Vercel едет только фронтенд: backend, PostgreSQL и Fabric
+работают в Docker. Адрес API задаётся переменной `EXPO_PUBLIC_API_URL` при сборке или в «Демо-меню» приложения.

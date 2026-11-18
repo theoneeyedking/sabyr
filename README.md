@@ -35,6 +35,7 @@ make demo
 | API и Swagger | http://localhost:8000/api/docs |
 | Обозреватель реестра | http://localhost:8090 |
 | Мобильное приложение | `cd mobile && npm install && npx expo start` (web или Android dev build, см. [mobile/README.md](mobile/README.md)) |
+| Веб-версия приложения | https://sabyr-three.vercel.app — ходит в API, указанный в «Демо-меню» (по умолчанию `http://localhost:8000`, то есть в стенд на вашей машине) |
 | Проверка сценария по HTTP | `python scripts/demo_check.py` |
 | Чистый лист перед повторным показом | `make demo-reset` (новый реестр + свежие данные) |
 
