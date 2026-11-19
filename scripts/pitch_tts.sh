@@ -13,7 +13,8 @@
 #   SPEED=1.08 ENGINE=piper ./scripts/pitch_tts.sh  # только Piper: медленнее (1.0 — обычный темп)
 #   PLAIN=1 ./scripts/pitch_tts.sh                  # без ручных ударений из data-say: движок расставит их сам
 #   MOOD=friendly VOICE=aidar ./scripts/pitch_tts.sh  # только Silero, настроение голоса:
-#        friendly — тон чуть выше (по умолчанию), warm — выше и чуть медленнее, calm — медленнее, neutral — как есть
+#        joyful — радостный, тон заметно выше; friendly — тон чуть выше (по умолчанию);
+#        warm — выше и чуть медленнее; calm — медленнее; neutral — как есть
 #   VOICE=aidar ./scripts/pitch_tts.sh --moods      # пробы всех настроений одного голоса в ~/sabyr-golosa
 set -euo pipefail
 
@@ -109,7 +110,8 @@ import torch
 
 work, model_name, default_mood = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
 # настроение = (темп, тон) для SSML; None — обычная речь
-MOODS = {"friendly": ("medium", "high"), "warm": ("slow", "high"), "calm": ("slow", "medium"), "neutral": None}
+MOODS = {"joyful": ("medium", "x-high"), "friendly": ("medium", "high"), "warm": ("slow", "high"),
+         "calm": ("slow", "medium"), "neutral": None}
 ssml_ok = True
 RATE = 48000
 PAUSE = int(RATE * 0.22)                # пауза между предложениями
@@ -195,10 +197,10 @@ if [ "${1:-}" = "--moods" ]; then
   SAMPLE="Здра́вствуйте! Э́то Сабы́р. Он бережёт ва́ши де́ньги в тот моме́нт, когда́ моше́нник угова́ривает перевести́ их самому́. Полтора́ миллио́на оста́лись до́ма!"
   : > "$WORK/lines.tsv"
   fetch_voice "$VOICE"
-  for m in friendly warm calm neutral; do printf 'mood-%s\t%s:%s\t%s\n' "$m" "$VOICE" "$m" "$SAMPLE" >> "$WORK/lines.tsv"; done
+  for m in joyful friendly warm calm neutral; do printf 'mood-%s\t%s:%s\t%s\n' "$m" "$VOICE" "$m" "$SAMPLE" >> "$WORK/lines.tsv"; done
   run_synth
   mkdir -p "$SAMPLES_DIR"
-  for m in friendly warm calm neutral; do ffmpeg -y -v error -i "$WORK/wav/mood-$m.wav" -ac 1 -b:a 96k "$SAMPLES_DIR/$VOICE-$m.mp3"; done
+  for m in joyful friendly warm calm neutral; do ffmpeg -y -v error -i "$WORK/wav/mood-$m.wav" -ac 1 -b:a 96k "$SAMPLES_DIR/$VOICE-$m.mp3"; done
   echo "Пробы настроений лежат в $SAMPLES_DIR — послушайте и запустите: MOOD=<имя> VOICE=$VOICE ./scripts/pitch_tts.sh"
   ls "$SAMPLES_DIR" | grep "^$VOICE-"
   exit 0
