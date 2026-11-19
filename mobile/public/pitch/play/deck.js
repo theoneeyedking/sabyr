@@ -98,6 +98,7 @@
       $$('[data-count]:not([data-in]):not([data-only]):not([data-out])', sl).forEach(count);
     });
     document.body.dataset.slide = slides[i].id || String(i);
+    window.SabyrScene?.setBeat(slides[i].id, s, !!snap); // трёхмерная сцена (scene.js) показывает тот же шаг
     const total = slides.reduce((acc, sl) => acc + stepsOf(sl) + 1, 0);
     const done = slides.slice(0, i).reduce((acc, sl) => acc + stepsOf(sl) + 1, 0) + s + 1;
     $('#progress i').style.width = `${(done / total) * 100}%`;
@@ -419,6 +420,7 @@
     if (!channel) $('#status').textContent = 'Этот браузер не умеет связывать окна. Листайте в окне зрителей.';
   }
 
+  window.SabyrDeck = { current: () => ({ id: slides[i].id, step: s }) };
   if (presenter) presenterView();
   else if (filmMode) filmView();
   else slidesView();

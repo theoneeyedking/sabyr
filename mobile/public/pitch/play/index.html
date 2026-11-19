@@ -14,6 +14,8 @@
 <div id="aud">
   <div id="stage">
     <div id="comp">
+      <canvas id="world" width="1920" height="1080" aria-hidden="true"></canvas>
+      <div id="scrim" aria-hidden="true"></div>
 
       <!-- 0. Титул -->
       <section class="slide" id="s-title" data-film data-title="Sabyr">
@@ -268,6 +270,7 @@
         </aside>
       </section>
 
+      <div id="bubbles" aria-hidden="true"></div>
     </div>
     <div id="catch"></div>
     <div id="cap" hidden aria-live="polite"><p></p></div>
@@ -339,5 +342,6 @@
 </div>
 
 <script src="deck.js"></script>
+<script type="module" src="scene.js"></script>
 </body>
 </html>
