@@ -19,6 +19,7 @@ from pathlib import Path
 PLAY = Path(__file__).resolve().parents[1] / "mobile" / "public" / "pitch" / "play"
 VOICE = PLAY / "voice"
 EXTENSIONS = (".mp3", ".m4a", ".ogg", ".wav")
+SAY = "--say" in sys.argv   # печатать реплики в написании «как читать вслух», по строке: ключ<TAB>текст
 
 
 def lines() -> list[tuple[str, str]]:
@@ -28,8 +29,11 @@ def lines() -> list[tuple[str, str]]:
     for slide in re.finditer(r'<section class="slide" id="([\w-]+)"([^>]*)>(.*?)</section>', html, re.S):
         if "data-film" not in slide.group(2):
             continue
-        for note in re.finditer(r'<p data-s="(\d+)"[^>]*>(.*?)</p>', slide.group(3), re.S):
-            out.append((f"{slide.group(1)}-{note.group(1)}", unescape(re.sub(r"<[^>]+>", "", note.group(2))).strip()))
+        for note in re.finditer(r'<p data-s="(\d+)"([^>]*)>(.*?)</p>', slide.group(3), re.S):
+            text = unescape(re.sub(r"<[^>]+>", "", note.group(3))).strip()
+            say = re.search(r'data-say="([^"]*)"', note.group(2))
+            # для синтезатора берётся data-say (как читать вслух), для диктора-человека — сам текст
+            out.append((f"{slide.group(1)}-{note.group(1)}", unescape(say.group(1)) if say and SAY else text))
     return out
 
 
@@ -41,6 +45,10 @@ def duration(path: Path) -> float:
 
 def main() -> None:
     script = lines()
+    if SAY:
+        for key, text in script:
+            print(f"{key}\t{text}")
+        return
     if "--list" in sys.argv:
         for key, text in script:
             print(f"{key}.mp3\n    {text}\n")

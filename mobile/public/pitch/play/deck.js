@@ -105,7 +105,13 @@
     $('#pos').textContent = `${i + 1} / ${slides.length}`;
     const note = noteOf(slides[i], s);
     $('#cap').hidden = !captions || !note;
-    $('#cap p').textContent = note;
+    // субтитры — по словам, чтобы фильм мог подсвечивать произносимое
+    $('#cap p').replaceChildren(...note.split(' ').filter(Boolean).flatMap((word, n) => {
+      const span = document.createElement('span');
+      span.className = filmMode ? 'w' : 'w on';
+      span.textContent = word;
+      return n ? [' ', span] : [span];
+    }));
     history.replaceState(null, '', `${location.pathname}${location.search}#${i + 1}.${s}`);
     channel?.postMessage(state());
   }
@@ -185,18 +191,34 @@
     film.total = at;
   }
 
+  /** Подсвечивает слова субтитров до n-го включительно. */
+  const litWords = (n) => $$('#cap .w').forEach((el, idx) => el.classList.toggle('on', idx <= n));
+  /** Подсветка по времени, пропорционально длине слов (когда точных отметок от голоса нет). */
+  function wordsByClock(entry, seconds) {
+    const words = entry.text.split(' ').filter(Boolean);
+    const total = words.reduce((acc, w) => acc + w.length + 1, 0);
+    let before = 0;
+    const ids = [];
+    words.forEach((w, n) => {
+      ids.push(setTimeout(() => litWords(n), (before / total) * seconds * 1000));
+      before += w.length + 1;
+    });
+    film.timers.push(...ids);
+    return ids;
+  }
+
   const ruVoice = () => (window.speechSynthesis?.getVoices() ?? []).find((v) => /^ru/i.test(v.lang));
 
   /** Произносит реплику и вызывает done по окончании. Возвращает название способа (для подсказки). */
   function speak(entry, done) {
-    const fallback = () => film.timers.push(setTimeout(done, (entry.dur - GAP) * 1000));
+    const fallback = () => { wordsByClock(entry, entry.dur - GAP); film.timers.push(setTimeout(done, (entry.dur - GAP) * 1000)); };
     if (film.muted) { fallback(); return 'mute'; }
     const clip = film.voice[entry.key];
     if (clip) {
       film.audio.src = `voice/${clip.file}`;
       film.audio.onended = done;
       film.audio.onerror = fallback;
-      film.audio.play().catch(fallback);
+      film.audio.play().then(() => wordsByClock(entry, clip.dur)).catch(fallback);
       return 'clip';
     }
     const voice = ruVoice();
@@ -206,6 +228,14 @@
     let finished = false;
     const end = () => { if (!finished) { finished = true; done(); } };
     u.onend = end; u.onerror = end;
+    // браузер сообщает, какое слово сейчас произносит, — подсвечиваем его в субтитрах
+    const clocked = wordsByClock(entry, entry.dur - GAP); // на случай, если отметок не будет
+    let exact = false;
+    u.onboundary = (e) => {
+      if (e.name && e.name !== 'word') return;
+      if (!exact) { exact = true; clocked.forEach(clearTimeout); }
+      litWords(entry.say.slice(0, e.charIndex).split(' ').filter(Boolean).length);
+    };
     film.timers.push(setTimeout(end, (entry.dur * 2 + 4) * 1000)); // на случай, если браузер «потерял» окончание
     speechSynthesis.cancel();
     speechSynthesis.speak(u);

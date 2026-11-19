@@ -47,6 +47,15 @@ body.world-dim #scrim { background-color: rgba(8, 15, 27, 0.9); }
 .bubble3d.warn { background: #3a2012; color: #ffcfae; border: 1px solid rgba(231, 122, 72, 0.65); }
 .bubble3d.code { background: rgba(10, 21, 36, 0.92); color: var(--em); border: 1px solid rgba(79, 214, 187, 0.5); border-radius: 16px;
   font: 500 24px ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; translate: -50% -100%; }
+.bubble3d.gauge { width: 300px; padding: 22px 26px 18px; border-radius: 34px; translate: 70px -40%; text-align: center;
+  background: rgba(10, 21, 36, 0.9); border: 1px solid rgba(231, 122, 72, 0.6); color: #ffb690; backdrop-filter: blur(6px); }
+.bubble3d.gauge svg { display: block; width: 100%; overflow: visible; }
+.bubble3d.gauge path { fill: none; stroke-width: 16; stroke-linecap: round; }
+.bubble3d.gauge .track { stroke: rgba(255, 255, 255, 0.12); }
+.bubble3d.gauge .arc { stroke: #e77a48; stroke-dasharray: 271; stroke-dashoffset: 271; animation: gauge 1.4s cubic-bezier(0.2, 0.7, 0.2, 1) 0.7s forwards; }
+.bubble3d.gauge b { display: block; margin-top: -74px; font-size: 76px; line-height: 1; font-weight: 800; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.bubble3d.gauge span { display: block; margin-top: 6px; font-size: 22px; font-weight: 600; color: var(--sub); letter-spacing: 0.08em; text-transform: uppercase; }
+@keyframes gauge { to { stroke-dashoffset: 0; } }
 @keyframes bubble { from { opacity: 0; scale: 0.8; } }
 
 /* в сцене часть содержимого слайдов заменяют человечки и облачка */
@@ -62,6 +71,13 @@ body.has3d #s-flow .flow-step h2 { font-size: 60px; max-width: 760px; }
 body.has3d #s-flow .flow-step p { display: none; }
 body.has3d #s-flow .dots { bottom: 6px; }
 body.has3d #s-title .lead, body.has3d .lead { text-shadow: 0 2px 18px rgba(7, 14, 26, 0.9); }
+/* титул поверх города: название меньше и ниже, чтобы было видно сцену */
+body.has3d #s-title { justify-content: flex-end; padding-bottom: 230px; }
+body.has3d #s-title .mark { font-size: 150px; }
+body.has3d #s-title h1 { font-size: 200px; }
+body.has3d #s-title .lock { gap: 30px; }
+body.has3d #s-title .lead { font-size: 46px; margin-top: 28px; max-width: 1000px; }
+body.has3d #s-title .word { font-size: 28px; }
 body.has3d h1, body.has3d h2, body.has3d .punch, body.has3d .chain-note, body.has3d .kicker { text-shadow: 0 2px 22px rgba(7, 14, 26, 0.95), 0 0 6px rgba(7, 14, 26, 0.9); }
 body.has3d #s-ledger .chain-note { color: var(--text); }
 body.has3d .plan .panel, body.has3d #s-title .case { background: rgba(10, 20, 36, 0.72); backdrop-filter: blur(6px); }
@@ -207,6 +223,9 @@ h2 { margin: 0; font-size: 80px; line-height: 1.02; font-weight: 800; letter-spa
 #progress { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: rgba(255, 255, 255, 0.08); }
 #progress i { display: block; height: 100%; width: 0; background: var(--em); transition: width 0.35s ease; }
 #cap { position: absolute; left: 50%; bottom: 3.2%; translate: -50% 0; width: min(82%, 1100px); pointer-events: none; }
+/* слова субтитров подсвечиваются по мере того, как их произносит диктор */
+#cap .w { opacity: 0.42; transition: opacity 0.18s ease; }
+#cap .w.on { opacity: 1; }
 #cap p { margin: 0; padding: 0.6em 1.1em; border-radius: 1em; background: rgba(5, 11, 20, 0.86); border: 1px solid var(--line);
   font-size: clamp(13px, 1.55vw, 21px); line-height: 1.4; text-align: center; color: var(--text); text-wrap: pretty; backdrop-filter: blur(6px); }
 .ctl { position: absolute; display: grid; place-items: center; min-width: 44px; height: 44px; padding: 0 14px; border-radius: 999px;
