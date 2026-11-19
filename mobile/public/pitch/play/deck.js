@@ -207,7 +207,13 @@
     return ids;
   }
 
-  const ruVoice = () => (window.speechSynthesis?.getVoices() ?? []).find((v) => /^ru/i.test(v.lang));
+  // Русские голоса браузера сильно различаются по качеству: «нейронные» и сетевые звучат заметно лучше системных.
+  const VOICE_RANK = [/natural|neural/i, /online/i, /google/i, /premium|enhanced|siri/i, /milena|yuri|katya/i];
+  const ruVoice = () => {
+    const voices = (window.speechSynthesis?.getVoices() ?? []).filter((v) => /^ru/i.test(v.lang));
+    const score = (v) => { const n = VOICE_RANK.findIndex((re) => re.test(v.name)); return n < 0 ? VOICE_RANK.length : n; };
+    return voices.sort((a, b) => score(a) - score(b))[0];
+  };
 
   /** Произносит реплику и вызывает done по окончании. Возвращает название способа (для подсказки). */
   function speak(entry, done) {
