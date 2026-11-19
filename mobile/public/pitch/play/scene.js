@@ -270,76 +270,199 @@ function start() {
     return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: t, emissiveMap: t, emissive: 0xffffff, emissiveIntensity: 0.9 }));
   }
 
-  // ---------- человечки ----------
-  const capsule = (r, len, material, y) => put(new THREE.CapsuleGeometry(r, len, 6, 12), material, 0, y, 0);
-  function person({ shirt, pants = 0x27334d, skin = 0xe3b891, hair = 0x2b2320, height = 1, phone = false, style = 'short', skirt = false }) {
+  // ---------- человечки: суставной «скелет» из гладких фигур ----------
+  // Иерархия: корень → таз → (ноги: бедро → колено → стопа) и позвоночник → (руки: плечо → локоть → кисть, голова).
+  // Всё генерируется кодом: формы тела, лицо, причёска, одежда и аксессуары задаются параметрами.
+  const LITE = matchMedia('(pointer: coarse)').matches || innerWidth < 900; // на телефонах — без теней и с меньшей толпой
+  if (LITE) renderer.shadowMap.enabled = false;
+  const taper = (rTop, rBottom, len, material) => put(new THREE.CylinderGeometry(rTop, rBottom, len, 12), material, 0, -len / 2, 0);
+  const torsoShape = [[0.150, 0], [0.174, 0.10], [0.200, 0.27], [0.212, 0.39], [0.180, 0.455], [0.110, 0.50], [0.058, 0.53]].map(([r, y]) => new THREE.Vector2(r, y));
+  function person({
+    shirt, pants = 0x27334d, skin = 0xe3b891, hair = 0x2b2320, shoes = 0x1a1d26, height = 1, phone = false, style = 'short',
+    skirt = false, dress = false, sleeves = 'long', jacket = null, glasses = false, bag = null, beard = false, scarf = 0xc9856f,
+  }) {
     const g = new THREE.Group();
-    const limb = (r, len, color, pivotY, x, endColor, endR) => {
-      const pivot = new THREE.Group();
-      pivot.position.set(x, pivotY, 0);
-      pivot.add(capsule(r, len, mat(color), -(len / 2 + r)));
-      if (endColor != null) pivot.add(ball(endR, mat(endColor), 0, -(len + r * 2), 0));
-      g.add(pivot);
-      return pivot;
-    };
-    const legL = limb(0.095, 0.56, pants, 0.9, -0.12);
-    const legR = limb(0.095, 0.56, pants, 0.9, 0.12);
-    [legL, legR].forEach((leg) => leg.add(box(0.15, 0.09, 0.3, mat(0x1a1d26), 0, -0.8, 0.06)));
-    const torso = put(new THREE.CapsuleGeometry(0.215, 0.34, 6, 14), mat(shirt), 0, 1.22, 0);
-    torso.scale.z = 0.72;
-    g.add(torso);
-    if (skirt) g.add(put(new THREE.CylinderGeometry(0.22, 0.34, 0.5, 14), mat(shirt), 0, 0.82, 0));
-    const armL = limb(0.07, 0.42, shirt, 1.5, -0.3, skin, 0.075);
-    const armR = limb(0.07, 0.42, shirt, 1.5, 0.3, skin, 0.075);
-    g.add(cyl(0.07, 0.1, mat(skin), 0, 1.56, 0, 8));
-    const head = new THREE.Group();
-    head.position.y = 1.78;
-    head.add(ball(0.2, mat(skin)));
-    [-0.075, 0.075].forEach((x) => head.add(ball(0.026, mat(0x1b1b22), x, 0.03, 0.182)));
-    const hairMat = mat(style === 'hood' ? shirt : hair);
-    const cap = put(new THREE.SphereGeometry(0.212, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.56), hairMat, 0, 0.012, -0.012);
-    cap.rotation.x = -0.28;
-    if (style !== 'bald') head.add(cap);
-    if (style === 'long') head.add(put(new THREE.CapsuleGeometry(0.17, 0.2, 4, 10), hairMat, 0, -0.14, -0.1));
-    if (style === 'bun' || style === 'scarf') head.add(ball(0.1, hairMat, 0, 0.1, -0.19));
-    if (style === 'scarf') {                      // платок: полоса по лбу
-      const band = put(new THREE.TorusGeometry(0.2, 0.035, 8, 20), mat(0xc9856f), 0, 0.09, 0);
-      band.rotation.x = Math.PI / 2 - 0.25;
-      head.add(band);
+    const top = mat(jacket ?? shirt);
+    const hips = new THREE.Group();
+    hips.position.y = 0.94;
+    g.add(hips);
+    const pelvis = put(new THREE.SphereGeometry(0.17, 14, 10), mat(skirt || dress ? shirt : pants), 0, 0, 0);
+    pelvis.scale.set(1.04, 0.76, 0.78);
+    hips.add(pelvis);
+    const hem = new THREE.Group();
+    if (skirt || dress) {
+      hem.add(put(new THREE.CylinderGeometry(0.165, dress ? 0.29 : 0.26, dress ? 0.66 : 0.44, 18), mat(shirt), 0, dress ? -0.33 : -0.22, 0));
+      hips.add(hem);
     }
-    if (style === 'hood') head.add(put(new THREE.SphereGeometry(0.245, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.7), hairMat, 0, 0, -0.03));
-    g.add(head);
-    if (phone) armR.add(box(0.1, 0.19, 0.03, glow(0xcfe6ff, 1.7), 0, -0.62, 0.09, false));
+
+    const leg = (x) => {
+      const cloth = mat(skirt || dress ? skin : pants);
+      const hip = new THREE.Group();
+      hip.position.set(x, -0.04, 0);
+      hip.add(ball(0.088, cloth), taper(0.088, 0.066, 0.42, cloth));
+      const knee = new THREE.Group();
+      knee.position.y = -0.42;
+      knee.add(ball(0.066, cloth), taper(0.064, 0.046, 0.4, cloth));
+      const foot = put(new THREE.CapsuleGeometry(0.052, 0.15, 4, 10), mat(shoes), 0, -0.425, 0.065);
+      foot.rotation.x = Math.PI / 2;
+      foot.scale.set(1.05, 1, 0.74);
+      knee.add(foot);
+      hip.add(knee);
+      hips.add(hip);
+      return { hip, knee };
+    };
+    const legs = [leg(-0.095), leg(0.095)];
+
+    const spine = new THREE.Group();
+    spine.position.y = 0.05;
+    hips.add(spine);
+    const torso = put(new THREE.LatheGeometry(torsoShape, 18), top, 0, 0, 0);
+    torso.scale.z = 0.68;
+    spine.add(torso);
+    if (jacket != null) {                                        // распахнутая куртка: видна рубашка и воротник
+      spine.add(box(0.07, 0.36, 0.016, mat(shirt), 0, 0.25, 0.132, false));
+      spine.add(box(0.012, 0.36, 0.02, mat(0x1b1b22), 0, 0.25, 0.141, false)); // молния
+    }
+    if (bag === 'backpack') spine.add(box(0.27, 0.34, 0.13, mat(0x39485f), 0, 0.27, -0.185), box(0.2, 0.1, 0.05, mat(0x55627f), 0, 0.2, -0.26));
+    if (bag === 'shoulder') {
+      spine.add(box(0.24, 0.18, 0.09, mat(0x8a5a3c), -0.24, -0.02, 0.02));
+      const strap = box(0.03, 0.62, 0.03, mat(0x6b452e), -0.04, 0.26, 0.1, false);
+      strap.rotation.z = -0.55;
+      spine.add(strap);
+    }
+
+    const arm = (side) => {
+      const sleeve = mat(jacket ?? shirt);
+      const lower = sleeves === 'short' ? mat(skin) : sleeve;
+      const shoulder = new THREE.Group();
+      shoulder.position.set(side * 0.2, 0.425, 0);
+      shoulder.add(ball(0.057, sleeve), taper(0.056, 0.047, 0.27, sleeve));
+      const elbow = new THREE.Group();
+      elbow.position.y = -0.27;
+      elbow.add(ball(0.047, lower), taper(0.045, 0.037, 0.25, lower));
+      const hand = ball(0.05, mat(skin), 0, -0.285, 0);
+      hand.scale.set(0.78, 1.12, 0.6);
+      elbow.add(hand);
+      shoulder.add(elbow);
+      spine.add(shoulder);
+      return { shoulder, elbow };
+    };
+    const arms = [arm(-1), arm(1)];
+    if (phone) arms[1].elbow.add(box(0.075, 0.15, 0.014, glow(0xcfe6ff, 1.8), 0, -0.33, 0.045, false));
+
+    const head = new THREE.Group();
+    head.position.y = 0.56;
+    spine.add(head);
+    head.add(taper(0.05, 0.056, 0.1, mat(skin)));
+    head.children[0].position.y = 0.04;
+    const skull = ball(0.15, mat(skin), 0, 0.17, 0);
+    skull.scale.set(0.93, 1.06, 0.98);
+    head.add(skull);
+    const dark = mat(0x1b1b22);
+    const eyes = [-0.052, 0.052].map((x) => {
+      const eye = ball(0.0175, dark, x, 0.19, 0.134);
+      head.add(eye, box(0.045, 0.009, 0.01, mat(hair), x, 0.228, 0.136, false));
+      return eye;
+    });
+    const smile = put(new THREE.TorusGeometry(0.026, 0.0055, 5, 12, Math.PI), mat(0x8a4038), 0, 0.118, 0.137, false);
+    smile.rotation.z = Math.PI;
+    head.add(ball(0.02, mat(skin), 0, 0.155, 0.148), smile);
+    [-0.142, 0.142].forEach((x) => head.add(ball(0.03, mat(skin), x, 0.165, 0)));
+    const hairMat = mat(style === 'hood' ? (jacket ?? shirt) : style === 'scarf' ? scarf : hair);
+    const crown = (r, cover, tilt) => {
+      const c = put(new THREE.SphereGeometry(r, 18, 12, 0, Math.PI * 2, 0, Math.PI * cover), hairMat, 0, 0.175, -0.008);
+      c.rotation.x = tilt;
+      c.scale.set(0.95, 1.06, 1);
+      return c;
+    };
+    if (style !== 'bald') head.add(crown(style === 'scarf' ? 0.166 : 0.158, style === 'hood' ? 0.74 : style === 'scarf' ? 0.6 : 0.55, style === 'hood' ? -0.12 : style === 'scarf' ? -0.42 : -0.32));
+    if (style === 'long') head.add(put(new THREE.CapsuleGeometry(0.13, 0.2, 4, 12), hairMat, 0, 0.06, -0.075));
+    if (style === 'bun') head.add(ball(0.075, hairMat, 0, 0.3, -0.09));
+    if (style === 'pony') {
+      const tail = put(new THREE.CapsuleGeometry(0.045, 0.2, 4, 8), hairMat, 0, 0.1, -0.2);
+      tail.rotation.x = 0.5;
+      head.add(tail);
+    }
+    if (style === 'cap') head.add(box(0.2, 0.02, 0.14, hairMat, 0, 0.245, 0.17));
+    if (style === 'scarf') {                                     // платок с узлом под подбородком, из-под него — чёлка
+      head.add(box(0.2, 0.035, 0.03, mat(hair), 0, 0.262, 0.118, false));
+      head.add(box(0.03, 0.2, 0.05, hairMat, -0.135, 0.12, 0.05, false), box(0.03, 0.2, 0.05, hairMat, 0.135, 0.12, 0.05, false));
+      head.add(ball(0.045, hairMat, 0, 0.03, 0.115));
+      const drape = put(new THREE.ConeGeometry(0.15, 0.24, 14), hairMat, 0, 0.02, -0.07);
+      head.add(drape);
+    }
+    if (beard) {
+      const b = put(new THREE.SphereGeometry(0.135, 14, 10, 0, Math.PI * 2, Math.PI * 0.55, Math.PI * 0.45), mat(hair), 0, 0.15, 0.03);
+      head.add(b);
+    }
+    if (glasses) {
+      [-0.052, 0.052].forEach((x) => head.add(put(new THREE.TorusGeometry(0.032, 0.006, 6, 16), dark, x, 0.19, 0.145, false)));
+      head.add(box(0.04, 0.006, 0.006, dark, 0, 0.19, 0.147, false));
+    }
     g.scale.setScalar(height);
-    g.userData = { legL, legR, armL, armR, head, phase: rand() * 6, pose: 'idle', gait: 0, baseY: 0 };
+    g.userData = { hips, spine, head, eyes, legs, arms, hem, phase: rand() * 6, pose: 'idle', gait: 0, baseY: 0, j: {} };
     scene.add(g);
     return g;
   }
-  /** Поза человечка: gait 0..1 — насколько он шагает; pose — что делают руки и голова. */
+
+  /** Целевые углы суставов для позы. Отрицательный угол — конечность идёт вперёд. */
+  function targets(u, t) {
+    const phi = t * 7.4 + u.phase;
+    const s = Math.sin(phi);
+    const c = Math.cos(phi);
+    const w = u.gait;                                   // 0..1 — насколько человечек шагает
+    const sway = Math.sin(t * 1.5 + u.phase);
+    const T = {
+      hipL: -0.62 * s * w, hipR: 0.62 * s * w,
+      kneeL: (0.08 + 0.95 * Math.max(0, c)) * w, kneeR: (0.08 + 0.95 * Math.max(0, -c)) * w,   // колено сгибается на переносе ноги
+      shL: 0.5 * s * w + sway * 0.03, shR: -0.5 * s * w - sway * 0.03, shLz: 0.07, shRz: -0.07,
+      elL: -0.14 - (0.18 + 0.32 * Math.max(0, -s)) * w, elR: -0.14 - (0.18 + 0.32 * Math.max(0, s)) * w,
+      spineX: 0.05 * w + sway * 0.012, spineY: 0.11 * s * w, hipsY: -0.08 * s * w,
+      headX: 0, headY: -0.06 * s * w, drop: -0.022 * Math.cos(2 * phi) * w, hop: 0,
+    };
+    const p = u.pose;
+    if (p === 'phone') Object.assign(T, { shR: -0.95, shRz: -0.3, elR: -2.15, headX: 0.06, headY: Math.sin(t * 0.7) * 0.2, spineY: Math.sin(t * 0.5) * 0.08 });
+    if (p === 'look') Object.assign(T, { shR: -0.5, elR: -1.45, shRz: 0.12, headX: 0.34, shL: -0.2, elL: -0.9 });
+    if (p === 'no') Object.assign(T, { shR: -0.5, elR: -1.45, shRz: 0.12, headX: 0.18, headY: Math.sin(t * 9) * 0.5 });
+    if (p === 'happy') {
+      const wave = Math.sin(t * 5.5) * 0.22;
+      Object.assign(T, { shL: -2.5 + wave, shR: -2.5 - wave, shLz: 0.62, shRz: -0.62, elL: -0.3, elR: -0.3, headX: -0.14,
+        hop: Math.abs(Math.sin(t * 5.5)) * 0.13, kneeL: 0.25, kneeR: 0.25, hipL: -0.12, hipR: -0.12 });
+    }
+    if (p.startsWith('sit')) Object.assign(T, { hipL: -1.5, hipR: -1.5, kneeL: 1.5, kneeR: 1.5, drop: -0.44, spineX: 0.04 });
+    if (p === 'sitcall') {
+      Object.assign(T, { shR: -0.95, shRz: -0.3, elR: -2.15, shL: -0.55 + Math.sin(t * 3 + u.phase) * 0.2, elL: -1.1 + Math.sin(t * 2.2 + u.phase) * 0.3,
+        headY: Math.sin(t * 0.9 + u.phase) * 0.28, spineX: 0.1 });
+    }
+    if (p === 'sittalk') {
+      Object.assign(T, { shL: -0.5 + Math.sin(t * 2.4 + u.phase) * 0.28, elL: -1.2 + Math.sin(t * 3.1 + u.phase) * 0.35, shR: -0.35, elR: -1.25,
+        headY: Math.sin(t * 0.8 + u.phase) * 0.5, headX: Math.sin(t * 1.3 + u.phase) * 0.1, spineY: Math.sin(t * 0.6 + u.phase) * 0.12 });
+    }
+    return T;
+  }
+
   function animate(p, t, dt) {
     const u = p.userData;
     u.gait += ((u.pose === 'walk' ? 1 : 0) - u.gait) * Math.min(1, dt * 6);
-    const swing = Math.sin(t * 7.2 + u.phase) * 0.62 * u.gait;
-    const breathe = Math.sin(t * 1.6 + u.phase) * 0.03;
-    const g = { ll: swing, lr: -swing, al: -swing * 0.8 + breathe, ar: swing * 0.8 - breathe, alz: 0, arz: 0, head: 0, turn: 0, sit: 0 };
-    if (u.pose === 'phone') { g.ar = -2.5; g.arz = -0.35; g.head = 0.08; g.turn = Math.sin(t * 0.7) * 0.18; }
-    if (u.pose === 'look') { g.ar = -1.15; g.head = 0.3; }
-    if (u.pose === 'no') { g.ar = -1.15; g.head = 0.2; g.turn = Math.sin(t * 9) * 0.45; }
-    if (u.pose === 'happy') { g.al = -2.7 + Math.sin(t * 5) * 0.2; g.ar = -2.7 - Math.sin(t * 5) * 0.2; g.alz = 0.3; g.arz = -0.3; g.head = -0.15; }
-    if (u.pose === 'sit' || u.pose === 'sitcall' || u.pose === 'sittalk') { g.ll = -1.52; g.lr = -1.52; g.sit = 1; }
-    if (u.pose === 'sitcall') { g.ar = -2.5; g.arz = -0.35; g.al = -1 + Math.sin(t * 3 + u.phase) * 0.25; g.turn = Math.sin(t * 0.9 + u.phase) * 0.25; }
-    if (u.pose === 'sittalk') { g.al = -0.9 + Math.sin(t * 2.4 + u.phase) * 0.45; g.ar = -0.7; g.turn = Math.sin(t * 0.8 + u.phase) * 0.5; g.head = Math.sin(t * 1.3 + u.phase) * 0.1; }
-    const k = Math.min(1, dt * 8);
-    u.legL.rotation.x += (g.ll - u.legL.rotation.x) * k;
-    u.legR.rotation.x += (g.lr - u.legR.rotation.x) * k;
-    u.armL.rotation.x += (g.al - u.armL.rotation.x) * k;
-    u.armR.rotation.x += (g.ar - u.armR.rotation.x) * k;
-    u.armL.rotation.z += (g.alz - u.armL.rotation.z) * k;
-    u.armR.rotation.z += (g.arz - u.armR.rotation.z) * k;
-    u.head.rotation.x += (g.head - u.head.rotation.x) * k;
-    u.head.rotation.y += (g.turn - u.head.rotation.y) * k;
-    const hop = u.pose === 'happy' ? Math.abs(Math.sin(t * 5)) * 0.12 : 0;
-    p.position.y = u.baseY + Math.abs(Math.sin(t * 7.2 + u.phase)) * 0.05 * u.gait - g.sit * 0.4 + hop;
+    const T = targets(u, t);
+    const k = Math.min(1, dt * 9);
+    const j = u.j;
+    for (const key in T) j[key] = (j[key] ?? T[key]) + (T[key] - (j[key] ?? T[key])) * k;
+    const [L, R] = u.legs;
+    L.hip.rotation.x = j.hipL; R.hip.rotation.x = j.hipR;
+    L.knee.rotation.x = j.kneeL; R.knee.rotation.x = j.kneeR;
+    const [AL, AR] = u.arms;
+    AL.shoulder.rotation.set(j.shL, 0, j.shLz); AR.shoulder.rotation.set(j.shR, 0, j.shRz);
+    AL.elbow.rotation.x = j.elL; AR.elbow.rotation.x = j.elR;
+    u.spine.rotation.set(j.spineX, j.spineY, 0);
+    u.hips.rotation.y = j.hipsY;
+    const lap = (j.hipL + j.hipR) / 2;                     // у сидящих подол ложится на колени
+    u.hem.rotation.x = lap < -0.6 ? lap * 0.86 : 0;
+    u.hem.scale.y = lap < -0.6 ? 0.72 : 1;
+    u.head.rotation.set(j.headX, j.headY, 0);
+    const blink = Math.sin(t * 0.9 + u.phase * 3) > 0.985 ? 0.12 : 1;
+    u.eyes[0].scale.y = blink; u.eyes[1].scale.y = blink;
+    p.position.y = u.baseY + (j.drop + j.hop) * p.scale.y;
   }
   const extras = []; // статисты: сидят, разговаривают
   const sitter = (opts, x, y, z, rot, pose = 'sittalk') => {
@@ -407,9 +530,9 @@ function start() {
     halo(0xff4030, 13, DEN.x, 2.6, DEN.z - 2.6, 0.35);
     lamp(0xff5040, 26, DEN.x, 2.8, DEN.z - 0.6, 15);
   }
-  sitter({ shirt: 0x24252e, pants: 0x1a1b22, style: 'hood', phone: true }, DEN.x, 0.3, DEN.z - 1.7, 0.2, 'sitcall');
+  sitter({ shirt: 0x24252e, pants: 0x1a1b22, style: 'hood', phone: true, beard: true }, DEN.x, 0.3, DEN.z - 1.7, 0.2, 'sitcall');
   sitter({ shirt: 0x2f2a36, pants: 0x1a1b22, style: 'hood', phone: true }, DEN.x - 2.6, 0.3, DEN.z - 1.7, 0.1, 'sitcall');
-  sitter({ shirt: 0x2a3036, pants: 0x1a1b22, style: 'short', hair: 0x1b1b1b, phone: true }, DEN.x + 2.6, 0.3, DEN.z - 1.7, -0.2, 'sitcall');
+  sitter({ shirt: 0x3a3f4a, jacket: 0x20232c, pants: 0x1a1b22, style: 'cap', hair: 0x1b1b1b, phone: true, glasses: true }, DEN.x + 2.6, 0.3, DEN.z - 1.7, -0.2, 'sitcall');
 
   // ---------- банки ----------
   function bank(pos, name, accent) {
@@ -447,8 +570,8 @@ function start() {
     scene.add(cyl(0.06, 2.6, mat(0x33405c), x - 2.1, 1.4, z - 0.6, 8), cyl(0.06, 2.6, mat(0x33405c), x + 2.1, 1.4, z - 0.6, 8));
     scene.add(box(3.2, 0.1, 0.5, mat(0x7a5a3c), x, 0.7, z + 0.3));
     scene.add(box(0.9, 0.5, 0.06, glow(0x4fd6bb, 1.4), x + 1.7, 2.3, z - 0.72, false));
-    sitter({ shirt: 0x7a66b5, hair: 0x6b4a2f, style: 'long', skirt: true }, x - 0.7, 0.26, z + 0.3, Math.PI, 'sittalk');
-    sitter({ shirt: 0x8a8f9a, pants: 0x2a3042 }, x + 0.5, 0.26, z + 0.3, Math.PI * 0.9, 'sittalk');
+    sitter({ shirt: 0x7a66b5, hair: 0x6b4a2f, style: 'long', skirt: true, bag: 'shoulder' }, x - 0.7, 0.3, z + 0.3, Math.PI, 'sittalk');
+    sitter({ shirt: 0xd9d2c2, jacket: 0x5a6478, pants: 0x2a3042, glasses: true, hair: 0x8a8a8a }, x + 0.5, 0.3, z + 0.3, Math.PI * 0.9, 'sittalk');
   }
   {
     const x = -33; const z = STREET_Z + 4.4;
@@ -464,29 +587,34 @@ function start() {
     [[-2, 0x4d8f6b, 0xd3b24a], [2.2, 0xb5607f, 0x4a78b8]].forEach(([dx, a, b], n) => {
       scene.add(cyl(0.55, 0.07, mat(0xf0e8d8), x + dx, 0.95, z - 0.6, 18), cyl(0.07, 0.75, mat(0x33405c), x + dx, 0.55, z - 0.6, 8));
       scene.add(cyl(0.3, 0.08, mat(0x33405c), x + dx - 1, 0.66, z - 0.6, 12), cyl(0.3, 0.08, mat(0x33405c), x + dx + 1, 0.66, z - 0.6, 12));
-      sitter({ shirt: a, style: n ? 'long' : 'short', hair: n ? 0x2b2320 : 0x6b4a2f, skirt: !!n }, x + dx - 1, 0.24, z - 0.6, Math.PI / 2, 'sittalk');
-      sitter({ shirt: b, style: n ? 'short' : 'bun', hair: 0x2b2320 }, x + dx + 1, 0.24, z - 0.6, -Math.PI / 2, 'sittalk');
+      sitter({ shirt: a, style: n ? 'pony' : 'short', hair: n ? 0x2b2320 : 0x6b4a2f, dress: !!n, sleeves: 'short', beard: !n }, x + dx - 1, 0.24, z - 0.6, Math.PI / 2, 'sittalk');
+      sitter({ shirt: b, style: n ? 'short' : 'bun', hair: n ? 0x4a3020 : 0x2b2320, jacket: n ? 0x39485f : null, skirt: !n }, x + dx + 1, 0.24, z - 0.6, -Math.PI / 2, 'sittalk');
     });
     lamp(0xffd0a0, 18, x, 2.6, z - 0.8, 12);
   }
 
   // ---------- главные герои и прохожие ----------
-  const gulnara = person({ shirt: 0x8a4f73, pants: 0x3b3550, hair: 0xb9b6b0, style: 'scarf', phone: true, skirt: true, height: 0.96 });
+  const gulnara = person({ shirt: 0x8a4f73, hair: 0xb9b6b0, style: 'scarf', scarf: 0xc9605a, phone: true, dress: true, shoes: 0x5a3a3a, height: 0.95 });
   gulnara.position.set(FLAT.x + 0.6, 0.3, FLAT.z + 0.2);
   gulnara.userData.baseY = 0.3;
   gulnara.rotation.y = 0.5;
-  const daniyar = person({ shirt: 0x2f6f8f, pants: 0x232c40, phone: true, height: 1.04 });
+  const daniyar = person({ shirt: 0xe8e4da, jacket: 0x2f6f8f, pants: 0x232c40, phone: true, bag: 'backpack', height: 1.04 });
   daniyar.userData.x = -9;
-  const clientB = person({ shirt: 0xb07a3a, pants: 0x2b2f3d, phone: true });
+  const clientB = person({ shirt: 0xb07a3a, pants: 0x2b2f3d, phone: true, style: 'cap', hair: 0x3a3340, sleeves: 'short' });
   clientB.position.set(BANK_B.x + 1.2, 0.6, BANK_B.z + 5.4);
   clientB.userData.baseY = 0.6;
   clientB.rotation.y = 0.2;
   clientB.userData.pose = 'look';
   const palette = [0xc2573f, 0x4d8f6b, 0xd3b24a, 0x7a66b5, 0x4a78b8, 0xb5607f, 0x8a8f9a, 0x3f9a9a, 0xd98a5a, 0x5a6fd0, 0x9ab85a, 0xd06a8a];
-  const walkers = palette.map((shirt, n) => {
+  const SKIN = [0xe3b891, 0xd9a67a, 0xf0c9a5, 0xc68e63];
+  const walkers = palette.slice(0, LITE ? 6 : palette.length).map((shirt, n) => {
+    const woman = n % 3 === 1;
     const w = person({
-      shirt, pants: n % 2 ? 0x2a3042 : 0x3a3340, hair: [0x2b2320, 0x6b4a2f, 0x1b1b1b, 0xb9b6b0][n % 4],
-      style: ['short', 'long', 'bun', 'short', 'bald'][n % 5], skirt: n % 3 === 1, height: 0.9 + (n % 4) * 0.05, phone: n % 4 === 0,
+      shirt, pants: n % 2 ? 0x2a3042 : 0x3a3340, skin: SKIN[n % 4], hair: [0x2b2320, 0x6b4a2f, 0x1b1b1b, 0xb9b6b0, 0x8a4a2a][n % 5],
+      style: woman ? ['long', 'pony', 'bun'][n % 3] : ['short', 'cap', 'short', 'bald'][n % 4],
+      skirt: woman && n % 2 === 0, dress: woman && n % 2 === 1, sleeves: n % 4 === 2 ? 'short' : 'long',
+      jacket: n % 3 === 0 ? [0x39485f, 0x5a4a3a, 0x2f4f4a][n % 3] : null, glasses: n % 5 === 3, beard: !woman && n % 6 === 4,
+      bag: [null, 'shoulder', 'backpack', null][n % 4], height: 0.92 + (n % 4) * 0.045, phone: n % 4 === 0,
     });
     Object.assign(w.userData, {
       dir: n % 2 ? 1 : -1, z: n % 2 ? STREET_Z + ((n % 3) - 1) * 0.6 : -4.4 + ((n % 3) - 1) * 0.25, x: -56 + n * 9.6, // дальний тротуар — у дороги, мимо комнат
@@ -498,12 +626,23 @@ function start() {
   // ---------- машины ----------
   function car(color, dir, x, speed) {
     const g = new THREE.Group();
-    g.add(box(3.6, 0.62, 1.6, mat(color), 0, 0.62, 0));
-    g.add(box(1.9, 0.56, 1.42, mat(0x1c2738), -0.15, 1.2, 0));
+    g.add(box(3.7, 0.5, 1.62, mat(color), 0, 0.6, 0));
+    const hood = put(new THREE.CylinderGeometry(0.81, 0.81, 3.7, 14, 1, false, 0, Math.PI), mat(color), 0, 0.6, 0);
+    hood.rotation.set(Math.PI / 2, 0, Math.PI / 2);      // скруглённые борта
+    hood.scale.set(1, 1, 0.42);
+    g.add(hood);
+    const cabin = put(new THREE.CylinderGeometry(0.78, 1.18, 0.56, 4), mat(color), -0.15, 1.13, 0);
+    cabin.rotation.y = Math.PI / 4;
+    cabin.scale.set(1.25, 1, 0.94);
+    g.add(cabin);
+    const glassMat = mat(0x8fb4e8, { emissive: 0x24406a, emissiveIntensity: 0.6, roughness: 0.2 });
+    g.add(box(1.5, 0.34, 1.5, glassMat, -0.15, 1.16, 0, false), box(1.86, 0.3, 1.1, glassMat, -0.15, 1.15, 0, false));
     [[-1.15, 0.82], [1.15, 0.82], [-1.15, -0.82], [1.15, -0.82]].forEach(([wx, wz]) => {
-      const w = cyl(0.33, 0.24, mat(0x12151c), wx, 0.33, wz, 14);
+      const w = cyl(0.34, 0.24, mat(0x12151c), wx, 0.34, wz, 16);
       w.rotation.x = Math.PI / 2;
-      g.add(w);
+      const rim = cyl(0.17, 0.26, mat(0xb9c2d0), wx, 0.34, wz, 12);
+      rim.rotation.x = Math.PI / 2;
+      g.add(w, rim);
     });
     [-0.52, 0.52].forEach((z) => {
       g.add(box(0.06, 0.2, 0.34, glow(0xfff2c8, 3), 1.82, 0.66, z, false), box(0.06, 0.16, 0.34, glow(0xff3a2a, 2.2), -1.82, 0.7, z, false));
@@ -775,7 +914,15 @@ function start() {
   addEventListener('resize', resize);
   resize();
 
-  window.SabyrScene = { setBeat };
+  /** Для проверки и съёмки: поставить камеру в произвольную точку (в демо не используется). */
+  function view(camPos, lookAt, extra = {}) {
+    goal.pos.set(...camPos); goal.look.set(...lookAt); goal.shift = 0; goal.ease = 1;
+    cam.pos.copy(goal.pos); cam.look.copy(goal.look); cam.shift = 0;
+    Object.assign(state, DEFAULT_STATE, extra);
+    bubblesBox.replaceChildren();
+    bubbles = [];
+  }
+  window.SabyrScene = { setBeat, view };
   const now = window.SabyrDeck?.current?.();
   if (now) setBeat(now.id, now.step, true);
   requestAnimationFrame(frame);
