@@ -11,7 +11,7 @@ class SignalsSerializer(serializers.Serializer):
 
 
 class CheckRequestSerializer(serializers.Serializer):
-    recipient_account = serializers.CharField(max_length=24)
+    recipient_account = serializers.CharField(max_length=24, help_text="Номер счёта или номер телефона получателя")
     amount = serializers.DecimalField(max_digits=16, decimal_places=2, min_value=1)
     signals = SignalsSerializer(required=False)
 

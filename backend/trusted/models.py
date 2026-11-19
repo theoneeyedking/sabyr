@@ -15,6 +15,7 @@ class TrustedRequest(models.Model):
         PENDING = "pending"
         APPROVED = "approved"
         DECLINED = "declined"
+        EXPIRED = "expired"   # не ответил вовремя — перевод отменён
 
     transfer = models.OneToOneField("bank.Transfer", on_delete=models.CASCADE, related_name="trusted_request")
     trusted = models.ForeignKey("bank.Client", on_delete=models.CASCADE, related_name="trusted_requests")

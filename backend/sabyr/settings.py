@@ -83,6 +83,8 @@ SABYR = {
     "RISK_WARN_THRESHOLD": 40,   # риск < 40 — перевод проходит
     "RISK_BLOCK_THRESHOLD": 70,  # риск > 70 — пауза + доверенное лицо
     "COOLDOWN_MINUTES": int(os.environ.get("SABYR_COOLDOWN_MINUTES", "15")),
+    # Сколько ждём ответа доверенного лица; без ответа перевод отменяется (деньги остаются у клиента)
+    "TRUSTED_WAIT_MINUTES": int(os.environ.get("SABYR_TRUSTED_WAIT_MINUTES", "30")),
     "ASSISTANT_MIN_TURNS": 2,
     "ASSISTANT_MAX_TURNS": 4,
     "MODEL_DIR": os.environ.get("SABYR_MODEL_DIR", str(BASE_DIR.parent / "ml" / "artifacts")),

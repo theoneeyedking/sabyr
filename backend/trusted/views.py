@@ -17,6 +17,7 @@ def request_json(req: TrustedRequest, lang: str) -> dict:
     return {
         "id": req.id, "status": req.status, "created_at": req.created_at.isoformat(),
         "responded_at": req.responded_at.isoformat() if req.responded_at else None,
+        "expires_at": services.trusted_deadline(req).isoformat(),
         "transfer": {
             "transfer_id": str(t.id), "status": t.status, "amount": str(t.amount),
             "sender_name": t.sender_account.owner.full_name,
@@ -31,8 +32,9 @@ def request_json(req: TrustedRequest, lang: str) -> dict:
 
 
 _RequestOut = inline_serializer("TrustedRequestOut", {
-    "id": serializers.IntegerField(), "status": serializers.ChoiceField(choices=["pending", "approved", "declined"]),
+    "id": serializers.IntegerField(), "status": serializers.ChoiceField(choices=["pending", "approved", "declined", "expired"]),
     "created_at": serializers.DateTimeField(), "responded_at": serializers.DateTimeField(allow_null=True),
+    "expires_at": serializers.DateTimeField(help_text="До этого времени ждём ответа; потом перевод отменяется"),
     "transfer": serializers.DictField()})
 
 

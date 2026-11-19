@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+import re
 from datetime import timedelta
 from decimal import Decimal
 
@@ -47,9 +48,31 @@ def _warning_payload(transfer: Transfer) -> dict:
     }
 
 
+_PHONE = re.compile(r"^\+?[\d\s()\-]{10,18}$")
+
+
+def normalize_phone(text: str) -> str | None:
+    """«8 700 000 00 59», «+7 (700) 000-00-59», «7000000059» → «+77000000059»; не телефон — None."""
+    if not _PHONE.match(text.strip()):
+        return None
+    digits = re.sub(r"\D", "", text)
+    if len(digits) == 11 and digits[0] in "78":
+        digits = digits[1:]
+    return "+7" + digits if len(digits) == 10 else None
+
+
+def find_recipient(text: str) -> Account | None:
+    """Получатель по номеру счёта или по номеру телефона (основной счёт клиента)."""
+    phone = normalize_phone(text)
+    if phone:
+        owner = Client.objects.filter(phone=phone).first()
+        return Account.objects.select_related("owner", "bank").filter(owner=owner).order_by("id").first() if owner else None
+    return Account.objects.select_related("owner", "bank").filter(number=re.sub(r"\s", "", text).upper()).first()
+
+
 def check_transfer(client: Client, recipient_number: str, amount: Decimal, signals: dict) -> tuple[Transfer, dict]:
     sender = client.main_account
-    recipient = Account.objects.select_related("owner", "bank").filter(number=recipient_number.strip().upper()).first()
+    recipient = find_recipient(recipient_number)
     if recipient is None:
         raise InterventionError("recipient_not_found", "Счёт получателя не найден", status=404)
     if recipient.id == sender.id:
@@ -132,6 +155,43 @@ def report_fraud(client: Client, transfer_id) -> Transfer:
     return transfer
 
 
+def trusted_deadline(req: TrustedRequest):
+    return req.created_at + timedelta(minutes=settings.SABYR["TRUSTED_WAIT_MINUTES"])
+
+
+def expire_trusted_request(transfer: Transfer) -> bool:
+    """Доверенное лицо не ответило вовремя: перевод отменяется, деньги остаются у клиента.
+
+    Выбран безопасный исход: мошеннику нельзя «переждать» молчание доверенного лица. Клиент может
+    создать перевод заново. Проверка ленивая — вызывается при чтении состояния и при действиях.
+    Вызывать внутри транзакции, перевод должен быть заблокирован (select_for_update).
+    """
+    if transfer.is_final:
+        return False
+    req = TrustedRequest.objects.select_for_update().filter(transfer=transfer).first()
+    if req is None or req.status != TrustedRequest.Status.PENDING or timezone.now() < trusted_deadline(req):
+        return False
+    req.status = TrustedRequest.Status.EXPIRED
+    req.responded_at = timezone.now()
+    req.save(update_fields=["status", "responded_at"])
+    transfer.status = Transfer.Status.CANCELLED
+    transfer.completed_at = timezone.now()
+    transfer.save(update_fields=["status", "completed_at"])
+    ledger.record_warning(transfer, ledger.TRUSTED_NO_ANSWER)
+    return True
+
+
+@transaction.atomic
+def refresh_transfer(client: Client, transfer_id) -> Transfer | None:
+    """Перевод клиента с применённым сроком ответа доверенного лица (для опроса экраном Sabyr)."""
+    transfer = (Transfer.objects.select_for_update().filter(id=transfer_id, sender_account__owner=client).first())
+    if transfer is None:
+        return None
+    expire_trusted_request(transfer)
+    return (Transfer.objects.select_related("recipient_account__bank", "recipient_account__owner", "sender_account")
+            .get(id=transfer.id))
+
+
 def assistant_turns(transfer: Transfer) -> int:
     return transfer.assistant_messages.filter(role="assistant").count()
 
@@ -162,6 +222,8 @@ def confirm_transfer(client: Client, transfer_id, decision: str, report_fraud: b
                 .filter(id=transfer_id, sender_account__owner=client).first())
     if transfer is None:
         raise InterventionError("transfer_not_found", "Перевод не найден", status=404)
+    if expire_trusted_request(transfer):
+        return transfer   # доверенное лицо не ответило вовремя — перевод уже отменён
     if transfer.is_final:
         raise InterventionError("already_final", f"Перевод уже завершён: {transfer.get_status_display()}",
                                 transfer_status=transfer.status)
@@ -195,7 +257,10 @@ def trusted_respond(trusted_client: Client, request_id: int, decision: str) -> T
         raise InterventionError("request_not_found", "Запрос не найден", status=404)
     if req.status != TrustedRequest.Status.PENDING:
         raise InterventionError("already_responded", "На этот запрос уже ответили")
-    transfer = req.transfer
+    transfer = Transfer.objects.select_for_update().get(id=req.transfer_id)
+    if expire_trusted_request(transfer):
+        req.refresh_from_db()   # время ответа вышло, перевод отменён: возвращаем запрос со статусом expired
+        return req
     if transfer.is_final:
         raise InterventionError("already_final", "Перевод уже завершён")
     req.responded_at = timezone.now()
@@ -255,7 +320,9 @@ def present_transfer(transfer: Transfer, lang: str, ledger_info: dict | None = N
         "cooldown_until": transfer.cooldown_until.isoformat() if transfer.cooldown_until else None,
         "cooldown_seconds_left": max(0, int((transfer.cooldown_until - timezone.now()).total_seconds()))
         if transfer.cooldown_until else 0,
-        "trusted_request": {"id": req.id, "status": req.status, "trusted_name": req.trusted.full_name} if req else None,
+        "trusted_request": {"id": req.id, "status": req.status, "trusted_name": req.trusted.full_name,
+                            "trusted_phone": req.trusted.phone,
+                            "expires_at": trusted_deadline(req).isoformat()} if req else None,
         "assistant_turns": assistant_turns(transfer),
         "fraud_reported": transfer.status == Transfer.Status.DECLINED or bool(transfer.features.get("_fraud_reported")),
         "can_confirm": (not transfer.is_final) and not confirm_blockers(transfer),

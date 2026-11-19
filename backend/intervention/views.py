@@ -52,8 +52,7 @@ def confirm(request):
                tags=["transfers"])
 @api_view(["GET"])
 def transfer_state(request, transfer_id):
-    transfer = (Transfer.objects.select_related("recipient_account__bank", "recipient_account__owner")
-                .filter(id=transfer_id, sender_account__owner=request.user).first())
+    transfer = services.refresh_transfer(request.user, transfer_id)
     if transfer is None:
         raise services.InterventionError("transfer_not_found", "Перевод не найден", status=404)
     return Response(services.present_transfer(transfer, lang_of(request)))
