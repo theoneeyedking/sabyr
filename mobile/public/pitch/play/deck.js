@@ -163,7 +163,7 @@
     document.body.classList.toggle('portrait', portrait);
     document.body.classList.toggle('tall', size.tall);
     document.body.classList.toggle('touch', touch);
-    document.body.classList.toggle('compact', size.k < 0.5); // телефон: сцена сильно уменьшена, мелкие подписи нужно укрупнить
+    document.body.classList.toggle('compact', touch && size.k < 0.5); // телефон: сцена сильно уменьшена, мелкие подписи нужно укрупнить
     window.SabyrScene?.resize(size.w, size.h, size.tall);
   }
 

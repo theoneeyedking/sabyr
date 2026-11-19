@@ -663,6 +663,8 @@ function start() {
         const centered = /money|ok|code/.test(b.tone);
         x = centered ? Math.max(bw / 2 + 24, Math.min(view.w - bw / 2 - 24, x)) : Math.max(8, Math.min(view.w - bw - 42, x));
         y = Math.max(b.el.offsetHeight + view.h * 0.2, y);
+      } else if (document.body.classList.contains('compact') && x < 980) {
+        y = Math.max(b.el.offsetHeight + 340, y); // телефон в альбоме: укрупнённое облачко не закрывает заголовок слева
       }
       b.el.style.left = `${x}px`;
       b.el.style.top = `${y}px`;
