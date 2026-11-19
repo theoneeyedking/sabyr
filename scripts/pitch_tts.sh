@@ -12,6 +12,9 @@
 #   ENGINE=piper VOICE=denis ./scripts/pitch_tts.sh
 #   SPEED=1.08 ENGINE=piper ./scripts/pitch_tts.sh  # только Piper: медленнее (1.0 — обычный темп)
 #   PLAIN=1 ./scripts/pitch_tts.sh                  # без ручных ударений из data-say: движок расставит их сам
+#   MOOD=friendly VOICE=aidar ./scripts/pitch_tts.sh  # только Silero, настроение голоса:
+#        friendly — тон чуть выше (по умолчанию), warm — выше и чуть медленнее, calm — медленнее, neutral — как есть
+#   VOICE=aidar ./scripts/pitch_tts.sh --moods      # пробы всех настроений одного голоса в ~/sabyr-golosa
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -22,6 +25,7 @@ SPEED="${SPEED:-1.0}"
 IMAGE="${PIPER_IMAGE:-sabyr-backend}"
 SAMPLES_DIR="${SAMPLES_DIR:-$HOME/sabyr-golosa}"
 SILERO_MODEL="${SILERO_MODEL:-v5_6_ru}"
+MOOD="${MOOD:-friendly}"
 
 case "$ENGINE" in
   silero) ALL_VOICES="xenia kseniya baya aidar eugene"; VOICE="${VOICE:-eugene}" ;;
@@ -103,7 +107,10 @@ from pathlib import Path
 
 import torch
 
-work, model_name = Path(sys.argv[1]), sys.argv[2]
+work, model_name, default_mood = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+# настроение = (темп, тон) для SSML; None — обычная речь
+MOODS = {"friendly": ("medium", "high"), "warm": ("slow", "high"), "calm": ("slow", "medium"), "neutral": None}
+ssml_ok = True
 RATE = 48000
 PAUSE = int(RATE * 0.22)                # пауза между предложениями
 torch.set_num_threads(4)
@@ -123,10 +130,22 @@ def clean(text: str) -> str:
 parts = {}
 for line in (work / "lines.tsv").read_text(encoding="utf-8").splitlines():
     name, speaker, text = line.split("\t", 2)
+    speaker, _, mood = speaker.partition(":")
+    prosody = MOODS.get(mood or default_mood)
     sentences = re.findall(r"[^.!?…]+[.!?…]+[»\")]*\s*|[^.!?…]+$", text)
     samples, lengths = array.array("h"), []
     for n, sentence in enumerate(sentences):
-        audio = model.apply_tts(text=clean(sentence), speaker=speaker, sample_rate=RATE)
+        plain = clean(sentence)
+        audio = None
+        if prosody and ssml_ok:
+            try:
+                ssml = f'<speak><prosody rate="{prosody[0]}" pitch="{prosody[1]}">{plain}</prosody></speak>'
+                audio = model.apply_tts(ssml_text=ssml, speaker=speaker, sample_rate=RATE)
+            except Exception as error:  # модель не понимает разметку — читаем обычным голосом
+                ssml_ok = False
+                print(f"  настроение голоса недоступно ({type(error).__name__}: {error}); читаю без него", flush=True)
+        if audio is None:
+            audio = model.apply_tts(text=plain, speaker=speaker, sample_rate=RATE)
         chunk = array.array("h", audio.mul(32767).clamp(-32768, 32767).to(torch.int16).tolist())
         if n < len(sentences) - 1:
             chunk.extend([0] * PAUSE)
@@ -146,7 +165,7 @@ run_synth() {
   local pip="pip install -q --user --no-warn-script-location --disable-pip-version-check"
   local cmd
   if [ "$ENGINE" = silero ]; then
-    cmd="$pip torch --index-url https://download.pytorch.org/whl/cpu && python /work/synth_silero.py /work $SILERO_MODEL"
+    cmd="$pip torch --index-url https://download.pytorch.org/whl/cpu && python /work/synth_silero.py /work $SILERO_MODEL $MOOD"
   else
     cmd="$pip piper-tts && python /work/synth_piper.py /work $SPEED"
   fi
@@ -171,6 +190,20 @@ if [ "${1:-}" = "--samples" ]; then
   exit 0
 fi
 
+if [ "${1:-}" = "--moods" ]; then
+  [ "$ENGINE" = silero ] || { echo "Настроения есть только у движка silero"; exit 1; }
+  SAMPLE="Здра́вствуйте! Э́то Сабы́р. Он бережёт ва́ши де́ньги в тот моме́нт, когда́ моше́нник угова́ривает перевести́ их самому́. Полтора́ миллио́на оста́лись до́ма!"
+  : > "$WORK/lines.tsv"
+  fetch_voice "$VOICE"
+  for m in friendly warm calm neutral; do printf 'mood-%s\t%s:%s\t%s\n' "$m" "$VOICE" "$m" "$SAMPLE" >> "$WORK/lines.tsv"; done
+  run_synth
+  mkdir -p "$SAMPLES_DIR"
+  for m in friendly warm calm neutral; do ffmpeg -y -v error -i "$WORK/wav/mood-$m.wav" -ac 1 -b:a 96k "$SAMPLES_DIR/$VOICE-$m.mp3"; done
+  echo "Пробы настроений лежат в $SAMPLES_DIR — послушайте и запустите: MOOD=<имя> VOICE=$VOICE ./scripts/pitch_tts.sh"
+  ls "$SAMPLES_DIR" | grep "^$VOICE-"
+  exit 0
+fi
+
 fetch_voice "$VOICE"
 python3 "$ROOT/scripts/pitch_voice.py" --say | awk -F'\t' -v v="$VOICE" '{ print $1 "\t" v "\t" $2 }' > "$WORK/lines.tsv"
 run_synth
@@ -182,4 +215,4 @@ while IFS=$'\t' read -r key _ _; do
 done < "$WORK/lines.tsv"
 cp "$WORK/parts.json" "$OUT/parts.json"
 python3 "$ROOT/scripts/pitch_voice.py"
-echo "Готово: $count реплик, движок $ENGINE, голос $VOICE. Откройте демо и послушайте."
+echo "Готово: $count реплик, движок $ENGINE, голос $VOICE, настроение $MOOD. Откройте демо и послушайте."
