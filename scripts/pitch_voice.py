@@ -10,6 +10,7 @@
 Можно записать только часть реплик: остальные прочитает голос браузера.
 """
 import json
+import os
 import re
 import subprocess
 import sys
@@ -46,8 +47,9 @@ def duration(path: Path) -> float:
 def main() -> None:
     script = lines()
     if SAY:
+        plain = os.environ.get("PLAIN") == "1"   # PLAIN=1 — без знаков ударения (если синтезатор их не понимает)
         for key, text in script:
-            print(f"{key}\t{text}")
+            print(f"{key}\t{text.replace(chr(0x301), '') if plain else text}")
         return
     if "--list" in sys.argv:
         for key, text in script:

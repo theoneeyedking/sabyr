@@ -181,7 +181,7 @@
         if (!line || Number(line.dataset.s || 0) !== step) continue; // шаг без своей реплики в фильм не входит
         const video = $$('video', sl).find((v) => visibleAt(v, step));
         film.seq.push({
-          i: idx, s: step, key: `${sl.id}-${step}`, text: line.textContent.trim(), say: line.dataset.say || line.textContent.trim(),
+          i: idx, s: step, key: `${sl.id}-${step}`, text: line.textContent.trim(), say: (line.dataset.say || line.textContent.trim()).replace(/\u0301/g, ''), // знаки ударения — только для синтезатора
           hold: video ? (film.clips[video.dataset.clip] ?? 0) : 0,
         });
       }

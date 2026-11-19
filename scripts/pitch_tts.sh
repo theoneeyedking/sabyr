@@ -7,6 +7,7 @@
 #   ./scripts/pitch_tts.sh --samples      # пробы всех голосов: послушать и выбрать (в демо ничего не меняет)
 #   VOICE=ruslan ./scripts/pitch_tts.sh   # озвучить демо выбранным голосом
 #   SPEED=1.08 VOICE=denis ./scripts/pitch_tts.sh   # медленнее (1.0 — обычный темп, больше — медленнее)
+#   PLAIN=1 ./scripts/pitch_tts.sh           # без знаков ударения из data-say (если голос на них спотыкается)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
