@@ -1,0 +1,43 @@
+/* Общие токены и шрифт для страницы проекта и презентации Sabyr. */
+@font-face { font-family: 'Onest'; src: url('fonts/Onest_400Regular.ttf') format('truetype'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Onest'; src: url('fonts/Onest_500Medium.ttf') format('truetype'); font-weight: 500; font-display: swap; }
+@font-face { font-family: 'Onest'; src: url('fonts/Onest_600SemiBold.ttf') format('truetype'); font-weight: 600; font-display: swap; }
+@font-face { font-family: 'Onest'; src: url('fonts/Onest_700Bold.ttf') format('truetype'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Onest'; src: url('fonts/Onest_800ExtraBold.ttf') format('truetype'); font-weight: 800; font-display: swap; }
+
+:root {
+  --bg: #0a1524;
+  --bg-lift: #12243b;
+  --panel: rgba(255, 255, 255, 0.06);
+  --line: rgba(255, 255, 255, 0.13);
+  --text: #f3f1ec;
+  --sub: #a9b4c4;
+  --faint: #6f7d91;
+  --em: #4fd6bb;
+  --em-deep: #0c7a68;
+  --amber: #e2a52b;
+  --terra: #e77a48;
+  --navy: #0f2742;
+  --paper: #f3f1ec;
+  --ink: #0f1b2a;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  font-family: 'Onest', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+a { color: inherit; }
+
+/* Знак Sabyr — «пауза» в скруглённом квадрате. */
+.mark {
+  display: inline-grid; grid-auto-flow: column; place-content: center; gap: 0.13em;
+  width: 1em; height: 1em; border-radius: 0.3em;
+  background: linear-gradient(135deg, #2a5f96, #0c1f37);
+  box-shadow: 0 0.12em 0.4em rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+.mark::before, .mark::after { content: ''; width: 0.13em; height: 0.4em; border-radius: 0.07em; background: #fff; }

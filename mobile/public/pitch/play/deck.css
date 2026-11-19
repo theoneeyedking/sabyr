@@ -1,0 +1,220 @@
+/* Презентация Sabyr: сцена 1920×1080, которая масштабируется под окно. Размеры ниже — в пикселях сцены. */
+html, body { height: 100%; overflow: hidden; background: #000; }
+body.idle #catch { cursor: none; }
+[hidden] { display: none !important; }
+
+/* ---------- зрители ---------- */
+#aud { position: fixed; inset: 0; display: grid; place-items: center; background: #000; }
+#stage { position: relative; overflow: hidden; background: var(--bg); }
+#comp { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; overflow: hidden;
+  background:
+    radial-gradient(900px 700px at 100% 0%, rgba(79, 214, 187, 0.16), transparent 70%),
+    radial-gradient(900px 800px at 0% 100%, rgba(231, 122, 72, 0.10), transparent 70%),
+    linear-gradient(160deg, #12243b, #0a1524 55%, #070f1b); }
+#comp::before { content: ''; position: absolute; right: -420px; top: -420px; width: 1300px; height: 1300px; border-radius: 50%;
+  background: repeating-radial-gradient(circle, transparent 0 96px, rgba(255, 255, 255, 0.045) 96px 98px); }
+#catch { position: absolute; inset: 0; }
+
+.slide { position: absolute; inset: 0; padding: 84px 132px 190px; display: flex; flex-direction: column;
+  opacity: 0; visibility: hidden; transition: opacity 0.45s ease, visibility 0s linear 0.45s; }
+.slide.on { opacity: 1; visibility: visible; transition: opacity 0.45s ease, visibility 0s; }
+.slide.snap, .slide.snap * { transition: none !important; }
+.notes { display: none; }
+
+[data-in], [data-out], [data-only] { opacity: 0; transform: translateY(26px);
+  transition: opacity 0.5s ease, transform 0.65s cubic-bezier(0.2, 0.7, 0.2, 1); }
+[data-in].in, [data-out].in, [data-only].in { opacity: 1; transform: none; }
+.swap { transform: none !important; transition: opacity 0.45s ease; }
+
+/* ---------- типографика ---------- */
+.kicker { margin: 0 0 22px; font-size: 26px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--em); }
+h2 { margin: 0; font-size: 80px; line-height: 1.02; font-weight: 800; letter-spacing: -0.04em; text-wrap: balance; max-width: 1500px; }
+.lead { margin: 30px 0 0; font-size: 40px; line-height: 1.3; font-weight: 500; color: var(--sub); max-width: 1350px; text-wrap: pretty; }
+.small { font-size: 26px; line-height: 1.4; color: var(--faint); }
+.em { color: var(--em); } .amber { color: var(--amber); } .terra { color: var(--terra); }
+.grow { flex: 1; min-height: 0; }
+.row { display: flex; gap: 40px; }
+.center { align-items: center; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 36px; padding: 40px 44px; }
+.src { position: absolute; left: 132px; bottom: 132px; font-size: 21px; color: var(--faint); }
+
+/* ---------- 0. титул ---------- */
+#s-title { justify-content: center; }
+#s-title .lock { display: flex; align-items: center; gap: 44px; }
+#s-title .mark { font-size: 230px; }
+#s-title h1 { margin: 0; font-size: 300px; line-height: 0.9; font-weight: 800; letter-spacing: -0.05em; }
+#s-title .lead { font-size: 58px; color: var(--text); margin-top: 48px; }
+#s-title .word { margin-top: 26px; font-size: 34px; color: var(--sub); }
+#s-title .word b { color: var(--em); font-weight: 600; }
+#s-title .case { position: absolute; left: 132px; top: 84px; padding: 12px 24px; border-radius: 999px; background: var(--panel);
+  border: 1px solid var(--line); font-size: 26px; font-weight: 500; color: var(--sub); }
+#s-title .case b { color: var(--text); font-weight: 600; }
+
+/* ---------- 1. история ---------- */
+.story { margin-top: 40px; display: grid; gap: 16px; max-width: 1400px; }
+.msg { display: flex; align-items: flex-start; gap: 26px; }
+.msg time { flex: none; width: 110px; padding-top: 22px; font-size: 28px; font-weight: 600; color: var(--faint); font-variant-numeric: tabular-nums; }
+.msg p { margin: 0; padding: 20px 32px; border-radius: 30px; border-top-left-radius: 10px; background: var(--panel);
+  border: 1px solid var(--line); font-size: 34px; line-height: 1.26; font-weight: 500; }
+.msg.money p { background: rgba(231, 122, 72, 0.16); border-color: rgba(231, 122, 72, 0.45); }
+.msg.money b { font-size: 46px; font-weight: 800; letter-spacing: -0.03em; color: #ffb690; }
+.punch { margin-top: 30px; font-size: 44px; line-height: 1.18; font-weight: 700; letter-spacing: -0.02em; max-width: 1500px; }
+
+/* ---------- 2. цифры ---------- */
+.stats { margin-top: 70px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; }
+.stat b { display: block; font-size: 128px; line-height: 1; font-weight: 800; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
+.stat span { display: block; margin-top: 20px; font-size: 32px; line-height: 1.3; color: var(--sub); }
+.stat small { display: block; margin-top: 14px; font-size: 21px; color: var(--faint); }
+
+/* ---------- 3. что уже есть ---------- */
+.exists { margin-top: 60px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+.exists .panel { display: flex; flex-direction: column; gap: 16px; min-height: 380px; }
+.exists h3 { margin: 0; font-size: 42px; line-height: 1.12; font-weight: 700; letter-spacing: -0.02em; }
+.exists .who { font-size: 25px; color: var(--faint); }
+.exists .gap { margin-top: auto; padding-top: 22px; border-top: 1px solid var(--line); font-size: 31px; line-height: 1.3; color: #ffc9ad; }
+.bridge { margin-top: 44px; font-size: 46px; font-weight: 700; letter-spacing: -0.02em; }
+
+/* ---------- 4. как это выглядит ---------- */
+#s-flow { flex-direction: row; gap: 110px; padding-top: 60px; padding-bottom: 150px; }
+.phone { position: relative; flex: none; width: 406px; height: 870px; border-radius: 66px; border: 12px solid #1b2c44; background: var(--paper);
+  overflow: hidden; box-shadow: 0 50px 110px rgba(0, 0, 0, 0.55), inset 0 0 0 2px rgba(255, 255, 255, 0.06); }
+.phone img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.flow-text { flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; }
+.flow-step { position: absolute; left: 0; right: 0; top: 50%; translate: 0 -50%; }
+.flow-step .n { font-size: 30px; font-weight: 700; letter-spacing: 0.1em; color: var(--em); }
+.flow-step h2 { margin-top: 18px; font-size: 80px; }
+.flow-step p { margin: 28px 0 0; font-size: 40px; line-height: 1.3; color: var(--sub); max-width: 1000px; }
+.dots { position: absolute; left: 0; bottom: 0; display: flex; gap: 14px; }
+.dots i { width: 54px; height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.14); transition: background 0.3s ease; }
+#s-flow[data-step="0"] .dots i:nth-child(1), #s-flow[data-step="1"] .dots i:nth-child(2), #s-flow[data-step="2"] .dots i:nth-child(3),
+#s-flow[data-step="3"] .dots i:nth-child(4), #s-flow[data-step="4"] .dots i:nth-child(5), #s-flow[data-step="5"] .dots i:nth-child(6) { background: var(--em); }
+
+/* ---------- 5. риск ---------- */
+.risk { margin-top: 10px; display: grid; grid-template-columns: 1fr 640px 1fr; gap: 40px; align-items: center; flex: 1; }
+.side h3 { margin: 0 0 20px; font-size: 40px; font-weight: 700; letter-spacing: -0.02em; }
+.side ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; font-size: 31px; line-height: 1.25; color: var(--sub); }
+.side li { padding-left: 34px; position: relative; }
+.side li::before { content: ''; position: absolute; left: 0; top: 0.48em; width: 14px; height: 14px; border-radius: 50%; background: currentColor; opacity: 0.55; }
+.side.left li::before { background: var(--amber); opacity: 1; }
+.side.right li::before { background: var(--terra); opacity: 1; }
+.gauge { position: relative; width: 640px; height: 370px; }
+.gauge svg { width: 100%; height: 100%; overflow: visible; }
+.gauge .arc { stroke-dasharray: 942.5; stroke-dashoffset: 942.5; transition: stroke-dashoffset 1.2s cubic-bezier(0.2, 0.7, 0.2, 1); }
+#s-risk[data-step="1"] .arc { stroke-dashoffset: 424; }
+#s-risk[data-step="2"] .arc, #s-risk[data-step="3"] .arc { stroke-dashoffset: 19; }
+.gauge .num { position: absolute; left: 0; right: 0; bottom: -6px; text-align: center; font-size: 150px; line-height: 1; font-weight: 800;
+  letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
+.gauge .num span { position: absolute; left: 0; right: 0; bottom: 0; }
+.formula { margin-top: 30px; text-align: center; font-size: 28px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.levels { margin-top: 14px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.levels div { padding: 16px 26px; border-radius: 24px; background: var(--panel); border: 1px solid var(--line); font-size: 26px; line-height: 1.25; color: var(--sub); }
+.levels b { display: block; margin-bottom: 2px; font-size: 34px; font-weight: 800; letter-spacing: -0.02em; }
+
+/* ---------- 6. помощник ---------- */
+#s-ai .row { margin-top: 36px; flex: 1; gap: 70px; }
+.chat { flex: none; width: 760px; display: grid; gap: 14px; align-content: start; }
+.bubble { max-width: 680px; padding: 18px 28px; border-radius: 30px; font-size: 28px; line-height: 1.3; }
+.bubble.bot { background: var(--paper); color: var(--ink); border-top-left-radius: 10px; }
+.bubble.me { justify-self: end; background: var(--navy); border: 1px solid var(--line); border-bottom-right-radius: 10px; }
+.bubble.block { background: rgba(231, 122, 72, 0.16); border: 1px solid rgba(231, 122, 72, 0.5); color: #ffd3bd; justify-self: end; }
+.points { display: grid; gap: 22px; align-content: start; }
+.point { display: flex; gap: 24px; align-items: flex-start; font-size: 34px; line-height: 1.28; color: var(--sub); }
+.point b { color: var(--text); font-weight: 700; }
+.point i { flex: none; width: 54px; height: 54px; border-radius: 18px; background: rgba(79, 214, 187, 0.16); display: grid; place-items: center;
+  font-style: normal; font-size: 28px; font-weight: 800; color: var(--em); }
+
+/* ---------- 7. реестр ---------- */
+.chain { margin-top: 60px; display: grid; grid-template-columns: 430px 1fr 430px; gap: 36px; align-items: stretch; flex: 1; }
+.bank { display: flex; flex-direction: column; gap: 14px; }
+.bank h3 { margin: 0; font-size: 44px; font-weight: 800; letter-spacing: -0.02em; }
+.bank p { margin: 0; font-size: 30px; line-height: 1.3; color: var(--sub); }
+.bank .tag { align-self: flex-start; padding: 8px 18px; border-radius: 999px; font-size: 24px; font-weight: 600; }
+.bank .tag.stop { background: rgba(79, 214, 187, 0.16); color: var(--em); }
+.bank .tag.warn { background: rgba(231, 122, 72, 0.18); color: #ffb690; }
+.blocks { display: flex; flex-direction: column; justify-content: center; gap: 22px; }
+.block { display: flex; align-items: center; gap: 24px; padding: 22px 30px; border-radius: 26px; background: rgba(15, 39, 66, 0.9);
+  border: 1px solid var(--line); font-size: 28px; color: var(--sub); }
+.block b { color: var(--text); font-weight: 700; }
+.block code { font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; font-size: 25px; color: var(--em); }
+.block .no { flex: none; width: 62px; height: 62px; border-radius: 18px; background: rgba(255, 255, 255, 0.08); display: grid; place-items: center;
+  font-size: 26px; font-weight: 800; color: var(--text); }
+.chain-note { margin-top: 34px; font-size: 32px; line-height: 1.3; color: var(--sub); max-width: 1500px; }
+
+/* ---------- 8. честно ---------- */
+.honest { margin-top: 54px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; flex: 1; align-items: start; }
+.honest h3 { margin: 0 0 22px; font-size: 36px; font-weight: 700; display: flex; align-items: center; gap: 16px; }
+.honest h3 i { width: 18px; height: 18px; border-radius: 50%; }
+.honest ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; font-size: 31px; line-height: 1.28; color: var(--sub); }
+.honest li b { color: var(--text); font-weight: 600; }
+
+/* ---------- 9. отличия ---------- */
+.diff { margin-top: 60px; display: grid; gap: 30px; }
+.diff div { display: grid; grid-template-columns: 96px 1fr; gap: 34px; align-items: start; }
+.diff i { font-style: normal; font-size: 84px; line-height: 1; font-weight: 800; letter-spacing: -0.04em; color: var(--em); }
+.diff h3 { margin: 0; font-size: 50px; line-height: 1.1; font-weight: 800; letter-spacing: -0.03em; }
+.diff p { margin: 12px 0 0; font-size: 33px; line-height: 1.3; color: var(--sub); max-width: 1300px; }
+
+/* ---------- 10. финал ---------- */
+#s-end { justify-content: center; }
+#s-end h2 { font-size: 130px; }
+.plan { margin-top: 60px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
+.plan .panel h3 { margin: 0 0 12px; font-size: 38px; font-weight: 700; letter-spacing: -0.02em; }
+.plan .panel p { margin: 0; font-size: 29px; line-height: 1.32; color: var(--sub); }
+.links { margin-top: 52px; font-size: 32px; color: var(--sub); }
+.links b { color: var(--text); font-weight: 600; }
+
+/* ---------- панель управления ---------- */
+#progress { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: rgba(255, 255, 255, 0.08); }
+#progress i { display: block; height: 100%; width: 0; background: var(--em); transition: width 0.35s ease; }
+#cap { position: absolute; left: 50%; bottom: 3.2%; translate: -50% 0; width: min(82%, 1100px); pointer-events: none; }
+#cap p { margin: 0; padding: 0.6em 1.1em; border-radius: 1em; background: rgba(5, 11, 20, 0.86); border: 1px solid var(--line);
+  font-size: clamp(13px, 1.55vw, 21px); line-height: 1.4; text-align: center; color: var(--text); text-wrap: pretty; backdrop-filter: blur(6px); }
+.ctl { position: absolute; display: grid; place-items: center; min-width: 44px; height: 44px; padding: 0 14px; border-radius: 999px;
+  border: 1px solid var(--line); background: rgba(5, 11, 20, 0.7); color: var(--text); font: 600 14px 'Onest', sans-serif; cursor: pointer;
+  transition: opacity 0.3s ease, background 0.2s ease; }
+.ctl:hover { background: rgba(5, 11, 20, 0.95); }
+.ctl:focus-visible { outline: 2px solid var(--em); outline-offset: 3px; }
+body.idle .ctl, body.idle #pos { opacity: 0; }
+#nav-prev { left: 14px; top: 50%; translate: 0 -50%; }
+#nav-next { right: 14px; top: 50%; translate: 0 -50%; }
+#cap-toggle { right: 14px; top: 14px; }
+#fs-toggle { right: 86px; top: 14px; }
+#back { left: 14px; top: 14px; text-decoration: none; }
+#pos { position: absolute; left: 14px; bottom: 14px; font-size: 13px; font-weight: 600; color: var(--faint); transition: opacity 0.3s ease; font-variant-numeric: tabular-nums; }
+#hint { position: absolute; left: 50%; top: 14px; translate: -50% 0; padding: 10px 18px; border-radius: 999px; background: rgba(5, 11, 20, 0.86);
+  border: 1px solid var(--line); font-size: 14px; color: var(--sub); white-space: nowrap; }
+#hint b { color: var(--text); font-weight: 600; }
+#rotate { display: none; }
+body.audience.portrait #rotate { display: block; position: fixed; left: 0; right: 0; bottom: 18px; text-align: center; font-size: 14px; color: var(--sub); }
+@media (max-width: 900px), (max-height: 520px), (pointer: coarse) { #hint { display: none; } }
+
+/* ---------- окно ведущего ---------- */
+#pres { display: none; }
+body.presenter { overflow: auto; background: var(--bg); }
+body.presenter #aud { display: none; }
+body.presenter #pres { display: block; max-width: 940px; margin: 0 auto; padding: 24px; }
+#pres .timers { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+#pres .grp { padding: 14px 16px; border-radius: 18px; background: var(--panel); border: 1px solid var(--line); }
+#pres .lbl { display: block; font-size: 13px; color: var(--faint); }
+#pres .big { display: block; margin-top: 4px; font-size: 34px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+#pres .big.over { color: var(--terra); }
+#pres #step { font-size: 20px; padding-top: 10px; }
+#now { margin-top: 16px; padding: 22px 24px; border-radius: 22px; background: var(--paper); color: var(--ink); }
+#sayhead { font-size: 14px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--em-deep); }
+#say { margin-top: 10px; font-size: 27px; line-height: 1.38; font-weight: 500; }
+#nextline { margin-top: 14px; font-size: 16px; line-height: 1.45; color: var(--sub); }
+#nextline b { color: var(--text); margin-right: 8px; }
+#pres .btns { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 10px; }
+#pres button { min-height: 48px; padding: 0 20px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel);
+  color: var(--text); font: 600 16px 'Onest', sans-serif; cursor: pointer; }
+#pres button:hover { background: rgba(255, 255, 255, 0.12); }
+#pres #bnext { background: var(--paper); color: var(--ink); border-color: transparent; }
+#status { margin-top: 14px; font-size: 15px; color: var(--amber); }
+#qa { margin-top: 20px; display: grid; gap: 12px; }
+#qa details { padding: 14px 18px; border-radius: 18px; background: var(--panel); border: 1px solid var(--line); }
+#qa summary { cursor: pointer; font-size: 18px; font-weight: 600; }
+#qa p { margin: 10px 0 0; font-size: 16px; line-height: 1.5; color: var(--sub); }
+
+@media (prefers-reduced-motion: reduce) {
+  .slide, [data-in], [data-out], [data-only], .gauge .arc, #progress i { transition: none !important; }
+}

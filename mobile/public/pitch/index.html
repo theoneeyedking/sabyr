@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Sabyr — спокойная пауза перед переводом</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Sabyr — модуль мобильного банка, который перед рискованным переводом ставит паузу, объясняет причину на языке клиента и подключает близкого человека.">
+<meta name="theme-color" content="#0a1524">
+<meta name="color-scheme" content="dark">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Sabyr — спокойная пауза перед переводом">
+<meta property="og:description" content="Защита клиента банка от социальной инженерии: пауза, объяснение на казахском и русском, доверенное лицо и межбанковский реестр.">
+<link rel="preload" href="fonts/Onest_800ExtraBold.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="stylesheet" href="pitch.css">
+<style>
+  body { min-height: 100dvh; overflow-x: hidden; }
+  .scene { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+  .scene::before {
+    content: ''; position: absolute; inset: 0;
+    background:
+      radial-gradient(60% 55% at 88% 0%, rgba(79, 214, 187, 0.22), transparent 70%),
+      radial-gradient(55% 60% at 0% 100%, rgba(231, 122, 72, 0.13), transparent 70%),
+      linear-gradient(160deg, #12243b, #0a1524 55%, #070f1b);
+  }
+  /* расходящиеся круги — мотив паузы */
+  .rings { position: absolute; right: -14vmax; top: -14vmax; width: 70vmax; height: 70vmax; border-radius: 50%;
+    background: repeating-radial-gradient(circle, transparent 0 5.2vmax, rgba(255, 255, 255, 0.055) 5.2vmax calc(5.2vmax + 1.5px)); }
+  .phone { position: absolute; right: max(4vw, 24px); bottom: -6vh; width: min(30vw, 400px); aspect-ratio: 412 / 880;
+    border-radius: 13% / 6%; border: 10px solid #1a2a40; background: #f3f1ec; overflow: hidden;
+    box-shadow: 0 40px 90px rgba(0, 0, 0, 0.5); transform: rotate(4deg); }
+  .phone img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+
+  .page { position: relative; min-height: 100dvh; display: flex; flex-direction: column; justify-content: center;
+    padding: max(28px, env(safe-area-inset-top)) clamp(22px, 6vw, 96px) 40px; max-width: 1500px; }
+  .plate { margin: 0 0 22px; display: inline-flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; align-self: flex-start;
+    padding: 8px 14px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line);
+    font-size: 14px; font-weight: 500; color: var(--sub); }
+  .plate b { color: var(--text); font-weight: 600; }
+  .lock { display: flex; align-items: center; gap: clamp(14px, 2vw, 28px); }
+  .lock .mark { font-size: clamp(56px, 9vw, 132px); flex: none; }
+  h1 { margin: 0; font-size: clamp(64px, 12vw, 176px); font-weight: 800; letter-spacing: -0.045em; line-height: 0.95; }
+  .lede { margin: clamp(16px, 2.2vw, 28px) 0 0; max-width: 20em; font-size: clamp(21px, 2.3vw, 34px); line-height: 1.25;
+    font-weight: 500; letter-spacing: -0.01em; text-wrap: balance; }
+  .layers { list-style: none; margin: clamp(16px, 2vw, 26px) 0 0; padding: 0; max-width: 34em; display: grid; gap: 9px;
+    font-size: clamp(15.5px, 1.25vw, 19px); line-height: 1.42; color: var(--sub); text-wrap: pretty; }
+  .layers b { display: inline-block; min-width: 7.2em; margin-right: 0.4em; font-size: 0.74em; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase; }
+  .layers li:nth-child(1) b { color: var(--em); }
+  .layers li:nth-child(2) b { color: var(--amber); }
+  .layers li:nth-child(3) b { color: #8fb4ff; }
+  .actions { margin-top: clamp(24px, 3vw, 40px); display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px; }
+  .play { display: inline-flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 28px 10px 12px;
+    border-radius: 999px; background: var(--paper); color: var(--ink); text-decoration: none;
+    font-size: 20px; font-weight: 700; letter-spacing: -0.01em; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
+    transition: transform 0.2s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.2s ease; }
+  .play:hover { transform: translateY(-2px); box-shadow: 0 20px 44px rgba(0, 0, 0, 0.42); }
+  .play:active { transform: scale(0.98); }
+  .play i { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--navy); }
+  .play i svg { width: 18px; height: 18px; margin-left: 3px; }
+  .alt { min-height: 44px; display: inline-flex; align-items: center; color: var(--sub); font-size: 17px; font-weight: 500;
+    text-decoration: underline; text-decoration-color: rgba(169, 180, 196, 0.4); text-underline-offset: 0.3em;
+    transition: color 0.18s ease, text-decoration-color 0.18s ease; }
+  .alt:hover { color: var(--text); text-decoration-color: var(--em); }
+  .foot { margin-top: clamp(28px, 4vw, 56px); font-size: 14px; color: var(--faint); max-width: 44em; line-height: 1.5; }
+  :focus-visible { outline: 2px solid var(--em); outline-offset: 4px; border-radius: 8px; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .plate, .lock, .lede, .layers, .actions, .foot { animation: settle 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+    .lock { animation-delay: 0.08s; } .lede { animation-delay: 0.2s; } .layers { animation-delay: 0.34s; }
+    .actions { animation-delay: 0.5s; } .foot { animation-delay: 0.65s; }
+    .phone { animation: phone 1s cubic-bezier(0.2, 0.7, 0.2, 1) 0.3s both; }
+    @keyframes settle { from { opacity: 0; transform: translateY(18px); } }
+    @keyframes phone { from { opacity: 0; transform: translateY(60px) rotate(8deg); } }
+  }
+  @media (max-width: 900px) {
+    .phone { display: none; }
+    .page { justify-content: flex-start; padding-top: max(56px, calc(env(safe-area-inset-top) + 40px)); }
+    .layers b { display: block; margin-bottom: 2px; }
+    .play { width: 100%; justify-content: flex-start; }
+  }
+</style>
+</head>
+<body>
+  <div class="scene" aria-hidden="true">
+    <div class="rings"></div>
+    <div class="phone"><img src="img/pause.webp" alt="" width="540" height="1199" decoding="async"></div>
+  </div>
+
+  <main class="page">
+    <p class="plate"><b>Кейс Банка ЦентрКредит</b><span>·</span><span>Инновации в банкинге и кибербезопасность</span></p>
+
+    <header>
+      <div class="lock"><span class="mark" aria-hidden="true"></span><h1>Sabyr</h1></div>
+      <p class="lede">Спокойная пауза перед переводом, который похож на обман.</p>
+    </header>
+
+    <ul class="layers">
+      <li><b>Работает</b>Перед рискованным переводом приложение ставит паузу, объясняет причины на казахском и русском и зовёт близкого человека.</li>
+      <li><b>Прототип</b>Банки помечают счета мошенников в общем реестре на Hyperledger Fabric — в нём только ключевые хэши.</li>
+      <li><b>Дальше</b>Пилот в банке на реальных данных: калибровка порогов и честные метрики.</li>
+    </ul>
+
+    <div class="actions">
+      <a class="play" href="play/">
+        <i aria-hidden="true"><svg viewBox="0 0 18 18"><path d="M3 1.6v14.8L16 9z" fill="#fff"/></svg></i>
+        <span>Смотреть презентацию</span>
+      </a>
+      <a class="alt" href="../">Открыть приложение</a>
+    </div>
+
+    <p class="foot">Все данные в проекте синтетические. Приложению нужен запущенный сервер Sabyr: его адрес задаётся в демо-меню (пять нажатий на логотип).</p>
+  </main>
+</body>
+</html>
