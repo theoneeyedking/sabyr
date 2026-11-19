@@ -8,6 +8,17 @@ const W = 1920;
 const H = 1080;
 const canvas = document.getElementById('world');
 const bubblesBox = document.getElementById('bubbles');
+// Размер кадра: 1920×1080, а у фильма на телефоне в портрете — вертикальный (его задаёт deck.js через resize).
+const view = { w: W, h: H, tall: false };
+// Вертикальный кадр уже: камера отъезжает и берёт шире, чтобы герои и город оставались в кадре.
+// Облегчённый режим для телефонов: меньше пикселей, тени проще, прохожих меньше, 30 кадров в секунду.
+// Город, герои и события остаются теми же. Принудительно: ?lite=1 / ?lite=0.
+const liteParam = new URLSearchParams(location.search).get('lite');
+const LITE = liteParam != null ? liteParam !== '0' : matchMedia('(pointer: coarse)').matches || Math.min(screen.width, screen.height) < 700;
+const LITE_PIXELS = 1.0e6;  // сколько пикселей рисовать на телефоне (экран растянет картинку сам)
+const TALL_FOV = 58;
+const TALL_DOLLY = 1.28;
+const TALL_DROP = 0.1;      // на какую долю высоты опустить кадр
 const rand = (() => { let s = 11; return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; })();
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
@@ -72,7 +83,7 @@ const DEFAULT_STATE = { call: 0, gulnara: 'idle', token: 'none', dome: 0, beams:
 
 let renderer;
 try {
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: !LITE, powerPreference: 'high-performance' });
 } catch (e) {
   renderer = null;
 }
@@ -84,7 +95,7 @@ function start() {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.2;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = LITE ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
   scene.fog = new THREE.Fog(0x0d1730, 80, 210);
@@ -163,10 +174,11 @@ function start() {
   moon.position.set(-26, 46, 40);
   moon.target.position.set(0, 0, -6);
   moon.castShadow = true;
-  moon.shadow.mapSize.set(2048, 2048);
+  moon.shadow.mapSize.set(LITE ? 1024 : 2048, LITE ? 1024 : 2048);
   Object.assign(moon.shadow.camera, { left: -52, right: 52, top: 40, bottom: -40, near: 1, far: 150 });
   moon.shadow.bias = -0.0006;
   moon.shadow.normalBias = 0.06;
+  moon.shadow.autoUpdate = !LITE; // на телефоне тени пересчитываются не в каждом кадре (см. frame)
   scene.add(moon, moon.target);
   const lamp = (color, intensity, x, y, z, distance = 18) => {
     const l = new THREE.PointLight(color, intensity, distance, 1.6);
@@ -492,6 +504,7 @@ function start() {
       dir: n % 2 ? 1 : -1, z: n % 2 ? STREET_Z + ((n % 3) - 1) * 0.6 : -4.4 + ((n % 3) - 1) * 0.25, x: -56 + n * 9.6, // дальний тротуар — у дороги, мимо комнат
       speed: 1.2 + (n % 4) * 0.2, pose: 'walk', baseY: 0.16,
     });
+    if (LITE && n > 2 && n % 2) w.visible = false; // на телефоне прохожих семь из двенадцати
     return w;
   });
 
@@ -595,14 +608,17 @@ function start() {
   const goal = { pos: cam.pos.clone(), look: cam.look.clone(), shift: 0, ease: 1 };
   let bubbles = [];
   let first = true;
+  let lastBeat = null;
 
   function setBeat(id, step, snap) {
     const beats = BEATS[id];
     document.body.classList.toggle('world-dim', !beats);
     const beat = beats ? beats[Math.min(step, beats.length - 1)] : WIDE;
-    goal.pos.set(...beat.cam);
     goal.look.set(...beat.look);
-    goal.shift = beat.shift ?? 0;
+    goal.pos.set(...beat.cam);
+    if (view.tall) goal.pos.sub(goal.look).multiplyScalar(TALL_DOLLY).add(goal.look);
+    goal.shift = view.tall ? 0 : beat.shift ?? 0; // в портрете телефон с записью стоит по центру, сдвигать кадр не нужно
+    lastBeat = [id, step];
     goal.ease = beat.ease ?? 1;
     Object.assign(state, DEFAULT_STATE, beat.state);
     if (snap) { cam.pos.copy(goal.pos); cam.look.copy(goal.look); cam.shift = goal.shift; }
@@ -640,14 +656,28 @@ function start() {
       }
       tmp.project(camera);
       b.el.style.visibility = tmp.z < 1 && Math.abs(tmp.x) < 1.2 ? 'visible' : 'hidden';
-      b.el.style.left = `${((tmp.x + 1) / 2) * W}px`;
-      b.el.style.top = `${((1 - tmp.y) / 2) * H}px`;
+      let x = ((tmp.x + 1) / 2) * view.w;
+      let y = ((1 - tmp.y) / 2) * view.h;
+      if (view.tall) { // узкий кадр: облачко не должно уезжать за край и под заголовок
+        const bw = b.el.offsetWidth;
+        const centered = /money|ok|code/.test(b.tone);
+        x = centered ? Math.max(bw / 2 + 24, Math.min(view.w - bw / 2 - 24, x)) : Math.max(8, Math.min(view.w - bw - 42, x));
+        y = Math.max(b.el.offsetHeight + view.h * 0.2, y);
+      }
+      b.el.style.left = `${x}px`;
+      b.el.style.top = `${y}px`;
     }
   }
 
   let last = performance.now();
   let t = 0;
+  let skip = false;
+  let shadowTick = -1;
   function frame(now) {
+    if (LITE) { // через кадр: 30 в секунду телефону хватает, а батарея и нагрев — вдвое меньше
+      skip = !skip;
+      if (skip && now - last < 30) { requestAnimationFrame(frame); return; }
+    }
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     t += dt;
@@ -763,19 +793,35 @@ function start() {
     }
 
     placeBubbles();
+    if (LITE && (shadowTick = (shadowTick + 1) % 3) === 0) moon.shadow.needsUpdate = true; // тени — 10 раз в секунду
     renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
 
-  function resize() {
-    const k = Math.min(innerWidth / W, innerHeight / H);
-    renderer.setPixelRatio(Math.min(2, Math.max(0.5, k * (window.devicePixelRatio || 1))));
-    renderer.setSize(W, H, false);
+  function resize(w = view.w, h = view.h, tall = view.tall) {
+    const changed = tall !== view.tall;
+    Object.assign(view, { w, h, tall });
+    const k = Math.min(innerWidth / w, innerHeight / h);
+    let ratio = Math.min(2, Math.max(0.5, k * (window.devicePixelRatio || 1)));
+    if (LITE) ratio = Math.min(ratio, Math.sqrt(LITE_PIXELS / (w * h)));
+    renderer.setPixelRatio(ratio);
+    renderer.setSize(w, h, false);
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+    camera.aspect = w / h;
+    camera.fov = tall ? TALL_FOV : 38;
+    // в портрете заголовок занимает верх экрана — кадр опускается, чтобы герои были в середине, а не под текстом
+    if (tall) camera.setViewOffset(w, h, 0, -h * TALL_DROP, w, h); else camera.clearViewOffset();
+    camera.updateProjectionMatrix();
+    if (changed && lastBeat) setBeat(lastBeat[0], lastBeat[1], true); // повернули телефон — тот же кадр под новую форму
   }
-  addEventListener('resize', resize);
-  resize();
+  addEventListener('resize', () => resize());
+  const fromDeck = window.SabyrDeck?.size?.();
+  if (fromDeck) resize(fromDeck.w, fromDeck.h, fromDeck.tall); else resize();
 
-  window.SabyrScene = { setBeat };
+  // info — для проверки нагрузки: сколько пикселей, вызовов отрисовки и треугольников в кадре
+  const info = () => ({ lite: LITE, pixels: Math.round(view.w * view.h * renderer.getPixelRatio() ** 2), calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, shadow: moon.shadow.mapSize.x });
+  window.SabyrScene = { setBeat, resize, info };
   const now = window.SabyrDeck?.current?.();
   if (now) setBeat(now.id, now.step, true);
   requestAnimationFrame(frame);

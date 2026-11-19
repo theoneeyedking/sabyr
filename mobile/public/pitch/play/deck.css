@@ -294,7 +294,97 @@ body.film:not(.idle) #cap, body.film.film-paused #cap { bottom: 62px; }
 #pl-fill { height: 100%; width: 0; background: var(--em); border-radius: 3px; }
 #novoice { position: absolute; left: 50%; top: 14px; translate: -50% 0; margin: 0; padding: 8px 16px; border-radius: 999px;
   background: rgba(5, 11, 20, 0.86); border: 1px solid var(--line); font-size: 13px; color: var(--amber); white-space: nowrap; }
-@media (max-width: 640px) { #pl-slides, #pl-fs, #pl-music { display: none; } }
+
+/* ---------- телефон: кнопки под палец, крупные субтитры ---------- */
+/* Кнопки «Экран» нет там, где браузер не умеет полноэкранный режим (iPhone) — класс ставит deck.js. */
+body.no-fs #pl-fs, body.no-fs #fs-toggle { display: none; }
+body.touch .plbtn { width: 44px; height: 44px; font-size: 14px; }
+body.touch .plbtn.txtbtn { width: auto; padding: 0 10px; }
+body.touch .plbtn svg { width: 20px; height: 20px; }
+body.touch #pl-scrub { height: 44px; }
+body.touch #pl-track { height: 6px; }
+body.touch #player { padding: 18px max(10px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); gap: 4px; }
+body.touch #back { left: max(14px, env(safe-area-inset-left)); top: max(14px, env(safe-area-inset-top)); }
+body.touch #cap p { font-size: clamp(15px, 2.1vw, 21px); }
+body.touch.film:not(.idle) #cap, body.touch.film.film-paused #cap { bottom: calc(66px + env(safe-area-inset-bottom)); }
+/* на телефоне сцена уменьшена в 3 раза и больше: облачка с репликами героев укрупняются */
+body.compact:not(.tall) .bubble3d { font-size: 40px; max-width: 640px; padding: 20px 28px; }
+body.compact:not(.tall) .bubble3d.money { font-size: 48px; }
+body.compact:not(.tall) .bubble3d.code { font-size: 32px; }
+body.compact:not(.tall) #s-flow .flow-step .n { font-size: 38px; }
+body.compact:not(.tall) .kicker { font-size: 34px; }
+/* узкий альбомный экран: «Слайды» в плеер не помещаются, они есть на финальном экране */
+@media (max-width: 760px) { body.film:not(.tall) #pl-slides { display: none; } }
+
+/* ---------- фильм на телефоне в портрете (body.tall): своя вертикальная сцена 1080 × высота окна ----------
+   Сверху заголовок, в середине герои и город, внизу субтитры. Размеры — в пикселях сцены: 1080 по ширине,
+   то есть 100px ≈ 36 настоящих на экране шириной 390. --k — масштаб сцены, --sh — её высота. */
+body.audience.tall #rotate { display: none; }
+body.tall .slide { padding: calc(74px / var(--k)) 64px calc(128px / var(--k)); }
+body.tall #scrim { background:
+  linear-gradient(180deg, rgba(7, 14, 26, 0.86), rgba(7, 14, 26, 0.35) 24%, transparent 40%),
+  linear-gradient(0deg, rgba(7, 14, 26, 0.9), rgba(7, 14, 26, 0.3) 26%, transparent 40%); }
+body.tall .kicker { font-size: 34px; margin-bottom: 18px; }
+body.tall h2, body.tall.has3d #s-story h2, body.tall.has3d #s-ledger h2 { font-size: 84px; line-height: 1.04; max-width: none; }
+body.tall .bubble3d { font-size: 42px; max-width: 660px; padding: 22px 30px; border-radius: 34px; border-bottom-left-radius: 10px; }
+body.tall .bubble3d.money { font-size: 54px; border-radius: 999px; }
+body.tall .bubble3d.ok { border-radius: 999px; }
+body.tall .bubble3d.code { font-size: 34px; border-radius: 20px; }
+body.tall .bubble3d.gauge { width: 380px; translate: -50% -110%; }
+body.tall .bubble3d.gauge b { font-size: 96px; margin-top: -94px; }
+body.tall .bubble3d.gauge span { font-size: 28px; }
+
+/* титул */
+body.tall.has3d #s-title { justify-content: flex-start; padding-bottom: 0; }
+body.tall #s-title .case { position: static; align-self: flex-start; margin: 0 0 54px; padding: 16px 28px; border-radius: 34px; font-size: 30px; line-height: 1.35; }
+body.tall.has3d #s-title .lock { gap: 30px; }
+body.tall.has3d #s-title .mark { font-size: 170px; }
+body.tall.has3d #s-title h1 { font-size: 236px; }
+body.tall.has3d #s-title .lead { font-size: 54px; margin-top: 36px; max-width: none; }
+body.tall.has3d #s-title .word { font-size: 36px; margin-top: 22px; }
+
+/* история и реестр: вывод слайда — над субтитрами */
+body.tall.has3d #s-story .punch { font-size: 46px; max-width: none; }
+body.tall.has3d #s-ledger .chain-note { font-size: 38px; max-width: none; }
+
+/* запись приложения: заголовок шага сверху, телефон — на всю оставшуюся высоту */
+body.tall.has3d #s-flow { flex-direction: column; gap: 0; align-items: center; padding-top: calc(70px / var(--k)); padding-bottom: 0; }
+body.tall.has3d #s-flow .flow-text { order: -1; flex: none; align-self: stretch; height: 250px; padding-top: 0; }
+body.tall.has3d #s-flow .flow-step { top: 0; }
+body.tall.has3d #s-flow .flow-step .n { font-size: 32px; }
+body.tall.has3d #s-flow .flow-step h2 { font-size: 68px; margin-top: 10px; max-width: none; }
+body.tall.has3d #s-flow .dots { bottom: 22px; }
+body.tall #s-flow .phone { flex: none; width: auto; aspect-ratio: 406 / 870; border-width: 10px; border-radius: 58px;
+  height: calc(var(--sh) - 70px / var(--k) - 250px - 124px / var(--k)); }
+body.tall[data-slide="s-flow"] #bubbles { display: none; }   /* то же самое показывает запись приложения */
+body.tall[data-slide="s-flow"] #scrim { background-color: rgba(7, 14, 26, 0.55); }
+
+/* финал: план столбиком */
+body.tall #s-end { justify-content: flex-start; }
+body.tall #s-end h2 { font-size: 104px; }
+body.tall .plan { grid-template-columns: 1fr; gap: 20px; margin-top: 44px; }
+body.tall .plan .panel { padding: 26px 34px; border-radius: 30px; }
+body.tall .plan .panel h3 { font-size: 40px; margin-bottom: 6px; }
+body.tall .plan .panel p { font-size: 31px; line-height: 1.3; }
+body.tall .links { margin-top: 30px; font-size: 32px; line-height: 1.35; }
+
+/* субтитры и плеер в портрете: плеер в две строки — перемотка сверху, кнопки снизу */
+body.tall #cap { width: 94%; bottom: calc(10px + env(safe-area-inset-bottom)); }
+body.tall #cap p { font-size: 16px; line-height: 1.38; padding: 0.55em 0.9em; }
+body.tall #player { flex-wrap: wrap; row-gap: 0; padding-top: 22px; background: linear-gradient(to top, rgba(3, 8, 15, 0.96) 70%, transparent); }
+body.tall #pl-cur { order: -3; }
+body.tall #pl-scrub { order: -2; flex: 1 1 calc(100% - 110px); }
+body.tall #pl-dur { order: -1; }
+body.tall #pl-play { margin-right: auto; background: rgba(255, 255, 255, 0.1); }
+body.tall #pl-slides { display: none; }   /* «Все слайды» есть на финальном экране */
+body.tall .plbtn.txtbtn { padding: 0 9px; }
+body.tall.film:not(.idle) #cap, body.tall.film.film-paused #cap { bottom: calc(112px + env(safe-area-inset-bottom)); }
+body.tall #start { gap: 14px; padding: 0 24px; }
+body.tall #start .go { width: 92px; }
+body.tall #start .txt { font-size: 30px; }
+body.tall #start .sub { font-size: 15px; line-height: 1.4; text-align: center; }
+body.tall #end { gap: 22px; padding: 0 20px; }
+body.tall #end p { font-size: 34px; }
 
 /* ---------- окно ведущего ---------- */
 #pres { display: none; }

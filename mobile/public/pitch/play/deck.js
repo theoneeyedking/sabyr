@@ -1,4 +1,5 @@
-/* Движок страницы «Демо» Sabyr. Сцена 1920×1080 масштабируется под окно. Три режима:
+/* Движок страницы «Демо» Sabyr. Сцена 1920×1080 масштабируется под окно; на телефоне в портретной ориентации
+   у фильма своя вертикальная сцена шириной 1080 (класс body.tall, раскладка — в конце deck.css). Три режима:
      демо (по умолчанию)  — фильм: шаги идут сами под голос диктора, есть пауза, перемотка и субтитры;
      ?slides              — те же слайды, но листаются вручную (для выступления), P открывает окно ведущего;
      ?presenter           — окно ведущего: таймер, текст выступления, ответы на вопросы жюри.
@@ -15,6 +16,7 @@
 (() => {
   const W = 1920;
   const H = 1080;
+  const PW = 1080;       // ширина портретной сцены фильма; высота — по пропорциям окна
   const BUDGET = 5 * 60; // секунд на выступление (окно ведущего)
   const GAP = 0.3;       // пауза между репликами в фильме, с
   const $ = (sel, root = document) => root.querySelector(sel);
@@ -138,25 +140,51 @@
     go(0, 0);
   }
 
+  const touch = matchMedia('(pointer: coarse)').matches;
+  const size = { w: W, h: H, k: 1, tall: false };
   function fit() {
-    const k = Math.min(innerWidth / W, innerHeight / H);
+    const vw = innerWidth;
+    const vh = innerHeight;
+    const portrait = vh > vw * 1.15;
+    // Фильм в портрете: не уменьшенная горизонтальная сцена, а своя вертикальная — текст и запись приложения крупнее.
+    size.tall = filmMode && portrait;
+    size.w = size.tall ? PW : W;
+    size.h = size.tall ? Math.round(Math.max(1500, Math.min(2400, (PW * vh) / vw))) : H;
+    size.k = Math.min(vw / size.w, vh / size.h);
     const stage = $('#stage');
-    stage.style.width = `${W * k}px`;
-    stage.style.height = `${H * k}px`;
-    $('#comp').style.transform = `scale(${k})`;
-    document.body.classList.toggle('portrait', innerHeight > innerWidth * 1.15);
+    stage.style.width = `${size.w * size.k}px`;
+    stage.style.height = `${size.h * size.k}px`;
+    const comp = $('#comp');
+    comp.style.width = `${size.w}px`;
+    comp.style.height = `${size.h}px`;
+    comp.style.transform = `scale(${size.k})`;
+    comp.style.setProperty('--k', String(size.k));     // чтобы в стилях сцены задавать размеры в настоящих пикселях
+    comp.style.setProperty('--sh', `${size.h}px`);
+    document.body.classList.toggle('portrait', portrait);
+    document.body.classList.toggle('tall', size.tall);
+    document.body.classList.toggle('touch', touch);
+    document.body.classList.toggle('compact', size.k < 0.5); // телефон: сцена сильно уменьшена, мелкие подписи нужно укрупнить
+    window.SabyrScene?.resize(size.w, size.h, size.tall);
   }
 
   let idle;
+  let wokeAt = 0; // когда касание вернуло спрятанный плеер
   function wake() {
+    if (document.body.classList.contains('idle')) wokeAt = performance.now();
     document.body.classList.remove('idle');
     clearTimeout(idle);
     idle = setTimeout(() => document.body.classList.add('idle'), 2600);
   }
 
+  // На iPhone полноэкранного режима для страниц нет — кнопку «Экран» там не показываем.
+  const root = document.documentElement;
+  const canFullscreen = !!(root.requestFullscreen || root.webkitRequestFullscreen);
+  document.body.classList.toggle('no-fs', !canFullscreen);
   function fullscreen() {
-    if (document.fullscreenElement) document.exitFullscreen();
-    else document.documentElement.requestFullscreen?.().catch(() => {});
+    if (!canFullscreen) return;
+    if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else if (root.requestFullscreen) root.requestFullscreen().catch(() => {});
+    else root.webkitRequestFullscreen();
   }
   const toggleCaptions = () => { captions = !captions; apply(); };
   const clock = (sec) => `${sec < 0 ? '−' : ''}${Math.floor(Math.abs(sec) / 60)}:${String(Math.floor(Math.abs(sec) % 60)).padStart(2, '0')}`;
@@ -350,6 +378,8 @@
     document.body.classList.add('audience', 'film');
     fit();
     addEventListener('resize', fit);
+    addEventListener('orientationchange', () => setTimeout(fit, 250)); // iOS сообщает новые размеры с задержкой
+    window.visualViewport?.addEventListener('resize', fit);
     [film.clips, film.voice] = await Promise.all([loadJson('../video/clips.json'), loadJson('voice/voice.json')]);
     // дорожки грузятся заранее (в память), чтобы голос не запаздывал на загрузку в начале каждой реплики
     film.audio.preload = 'auto';
@@ -370,7 +400,12 @@
     const begin = () => { $('#start').hidden = true; film.k = 0; play(); wake(); };
     $('#start').addEventListener('click', begin);
     $('#pl-play').addEventListener('click', () => (film.playing ? pause() : play()));
-    $('#catch').addEventListener('click', () => { if ($('#start').hidden && $('#end').hidden) { if (film.playing) pause(); else play(); } });
+    $('#catch').addEventListener('click', () => {
+      if (!$('#start').hidden || !$('#end').hidden) return;
+      // на телефоне первое касание только показывает плеер; пауза — вторым касанием или кнопкой
+      if (touch && film.playing && performance.now() - wokeAt < 600) return;
+      if (film.playing) pause(); else play();
+    });
     $('#pl-mute').addEventListener('click', () => {
       film.muted = !film.muted;
       $('#pl-mute').dataset.state = film.muted ? 'off' : 'on';
@@ -417,6 +452,8 @@
     document.body.classList.add('audience', 'manual');
     fit();
     addEventListener('resize', fit);
+    addEventListener('orientationchange', () => setTimeout(fit, 250)); // iOS сообщает новые размеры с задержкой
+    window.visualViewport?.addEventListener('resize', fit);
     const [hi, hs] = location.hash.slice(1).split('.').map(Number);
     go(Number.isFinite(hi) && hi > 0 ? hi - 1 : 0, Number.isFinite(hs) ? hs : 0, true);
     requestAnimationFrame(() => slides.forEach((sl) => sl.classList.remove('snap')));
@@ -496,7 +533,7 @@
     if (!channel) $('#status').textContent = 'Этот браузер не умеет связывать окна. Листайте в окне зрителей.';
   }
 
-  window.SabyrDeck = { current: () => ({ id: slides[i].id, step: s }) };
+  window.SabyrDeck = { current: () => ({ id: slides[i].id, step: s }), size: () => size };
   if (presenter) presenterView();
   else if (filmMode) filmView();
   else slidesView();
