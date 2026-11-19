@@ -1,1 +1,86 @@
-{}
+{
+  "s-title-0": {
+    "file": "s-title-0.mp3",
+    "dur": 5.85
+  },
+  "s-title-1": {
+    "file": "s-title-1.mp3",
+    "dur": 5.7
+  },
+  "s-story-0": {
+    "file": "s-story-0.mp3",
+    "dur": 5.5
+  },
+  "s-story-1": {
+    "file": "s-story-1.mp3",
+    "dur": 4.27
+  },
+  "s-story-2": {
+    "file": "s-story-2.mp3",
+    "dur": 2.46
+  },
+  "s-story-3": {
+    "file": "s-story-3.mp3",
+    "dur": 3.58
+  },
+  "s-story-4": {
+    "file": "s-story-4.mp3",
+    "dur": 5.34
+  },
+  "s-flow-0": {
+    "file": "s-flow-0.mp3",
+    "dur": 7.22
+  },
+  "s-flow-1": {
+    "file": "s-flow-1.mp3",
+    "dur": 7.31
+  },
+  "s-flow-2": {
+    "file": "s-flow-2.mp3",
+    "dur": 7.51
+  },
+  "s-flow-3": {
+    "file": "s-flow-3.mp3",
+    "dur": 6.87
+  },
+  "s-flow-4": {
+    "file": "s-flow-4.mp3",
+    "dur": 7.07
+  },
+  "s-flow-5": {
+    "file": "s-flow-5.mp3",
+    "dur": 4.99
+  },
+  "s-ledger-0": {
+    "file": "s-ledger-0.mp3",
+    "dur": 2.48
+  },
+  "s-ledger-1": {
+    "file": "s-ledger-1.mp3",
+    "dur": 3.52
+  },
+  "s-ledger-2": {
+    "file": "s-ledger-2.mp3",
+    "dur": 7.93
+  },
+  "s-ledger-3": {
+    "file": "s-ledger-3.mp3",
+    "dur": 6.84
+  },
+  "s-ledger-4": {
+    "file": "s-ledger-4.mp3",
+    "dur": 8.25
+  },
+  "s-end-0": {
+    "file": "s-end-0.mp3",
+    "dur": 3.49
+  },
+  "s-end-1": {
+    "file": "s-end-1.mp3",
+    "dur": 7.2
+  },
+  "s-end-2": {
+    "file": "s-end-2.mp3",
+    "dur": 4.59
+  }
+}
