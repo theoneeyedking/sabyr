@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>Sabyr — презентация</title>
+<title>Sabyr — демо</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark">
@@ -16,19 +16,19 @@
     <div id="comp">
 
       <!-- 0. Титул -->
-      <section class="slide" id="s-title" data-title="Sabyr">
+      <section class="slide" id="s-title" data-film data-title="Sabyr">
         <p class="case"><b>Кейс Банка ЦентрКредит</b> · Инновации в банкинге и кибербезопасность</p>
         <div class="lock"><span class="mark" aria-hidden="true"></span><h1>Sabyr</h1></div>
         <p class="lead">Спокойная пауза перед переводом, который похож на обман.</p>
         <p class="word" data-in="1"><b>сабыр</b> — по-казахски «терпение, спокойствие»</p>
         <aside class="notes">
-          <p data-s="0">Здравствуйте. Мы — команда Sabyr. Наш проект защищает клиента банка в тот момент, когда он сам переводит деньги мошеннику.</p>
+          <p data-s="0" data-say="Это Сабыр. Он защищает клиента банка в тот момент, когда человек сам переводит деньги мошеннику.">Это Sabyr. Он защищает клиента банка в тот момент, когда человек сам переводит деньги мошеннику.</p>
           <p data-s="1">«Сабыр» по-казахски — терпение, спокойствие. Именно этого мошенник человеку не оставляет.</p>
         </aside>
       </section>
 
       <!-- 1. История -->
-      <section class="slide" id="s-story" data-title="Клиент переводит сам">
+      <section class="slide" id="s-story" data-film data-title="Клиент переводит сам">
         <p class="kicker">Проблема</p>
         <h2>Гульнара, 62 года. Деньги она переведёт сама.</h2>
         <div class="story">
@@ -84,31 +84,31 @@
       </section>
 
       <!-- 4. Как это выглядит -->
-      <section class="slide" id="s-flow" data-title="Как это выглядит">
+      <section class="slide" id="s-flow" data-film data-title="Как это выглядит">
         <div class="phone">
-          <img class="swap" data-only="0" src="../img/transfer.webp" alt="Экран перевода">
-          <img class="swap" data-only="1" src="../img/pause.webp" alt="Экран паузы Sabyr с причинами">
-          <img class="swap" data-only="2" src="../img/cooldown.webp" alt="Таймер паузы и доверенное лицо">
-          <img class="swap" data-only="3" src="../img/chat.webp" alt="Диалог с помощником">
-          <img class="swap" data-only="4" src="../img/trusted.webp" alt="Экран доверенного лица">
-          <img class="swap" data-only="5" src="../img/final.webp" alt="Перевод отклонён, деньги остались">
+          <video class="swap" data-only="0" data-clip="transfer" src="../video/transfer.mp4" poster="../video/transfer.webp" muted playsinline preload="auto" aria-label="Запись: клиент вводит сумму и получателя"></video>
+          <video class="swap" data-only="1" data-clip="pause" src="../video/pause.mp4" poster="../video/pause.webp" muted playsinline preload="auto" aria-label="Запись: экран паузы Sabyr с причинами"></video>
+          <video class="swap" data-only="2" data-clip="cooldown" src="../video/cooldown.mp4" poster="../video/cooldown.webp" muted playsinline preload="auto" aria-label="Запись: таймер паузы и доверенное лицо"></video>
+          <video class="swap" data-only="3" data-clip="chat" src="../video/chat.mp4" poster="../video/chat.webp" muted playsinline preload="auto" aria-label="Запись: диалог с помощником"></video>
+          <video class="swap" data-only="4" data-clip="trusted" src="../video/trusted.mp4" poster="../video/trusted.webp" muted playsinline preload="auto" aria-label="Запись: экран доверенного лица"></video>
+          <video class="swap" data-only="5" data-clip="final" src="../video/final.mp4" poster="../video/final.webp" muted playsinline preload="auto" aria-label="Запись: перевод отклонён, деньги остались"></video>
         </div>
         <div class="flow-text">
           <div class="flow-step swap" data-only="0"><span class="n">ШАГ 1</span><h2>Обычный перевод</h2><p>Клиент вводит сумму и получателя. Приложение замечает: сейчас идёт звонок.</p></div>
           <div class="flow-step swap" data-only="1"><span class="n">ШАГ 2</span><h2>Пауза и три причины</h2><p>Вместо отказа — спокойный экран: что именно насторожило, простыми словами, на казахском или русском.</p></div>
           <div class="flow-step swap" data-only="2"><span class="n">ШАГ 3</span><h2>15 минут и близкий человек</h2><p>Деньги остаются у клиента. Сын получает просьбу посмотреть на перевод — ему можно позвонить одной кнопкой.</p></div>
-          <div class="flow-step swap" data-only="3"><span class="n">ШАГ 4</span><h2>Помощник задаёт вопрос</h2><p>Настоящая языковая модель спрашивает то, что вскрывает именно эту схему обмана. Без давления и обвинений.</p></div>
-          <div class="flow-step swap" data-only="4"><span class="n">ШАГ 5</span><h2>Сын видит всё</h2><p>Сумму, получателя, риск и причины. И решает: подтвердить или отклонить.</p></div>
+          <div class="flow-step swap" data-only="3"><span class="n">ШАГ 4</span><h2>Помощник задаёт вопрос</h2><p>Настоящая языковая модель спрашивает то, что вскрывает именно эту схему обмана. Спокойно, на языке клиента.</p></div>
+          <div class="flow-step swap" data-only="4"><span class="n">ШАГ 5</span><h2>Сын видит всё</h2><p>Сумму, получателя, риск и причины — уже на русском. И решает: подтвердить или отклонить.</p></div>
           <div class="flow-step swap" data-only="5"><span class="n">ШАГ 6</span><h2>Деньги остались</h2><p>Перевод отклонён. Счёт мошенника помечен — теперь о нём узнают и другие банки.</p></div>
           <div class="dots"><i></i><i></i><i></i><i></i><i></i><i></i></div>
         </div>
         <aside class="notes">
-          <p data-s="0">Покажем на живых экранах — это снимки работающего приложения. Гульнара начинает перевод. Приложение видит, что идёт звонок.</p>
+          <p data-s="0">Дальше — запись работающего приложения. Гульнара вводит сумму и счёт. Приложение видит, что сейчас идёт звонок.</p>
           <p data-s="1">Вместо молчаливого отказа — пауза и три причины человеческим языком. Интерфейс на казахском, потому что это язык Гульнары.</p>
-          <p data-s="2">Запускается пятнадцатиминутная пауза, а её сыну Данияру уходит просьба посмотреть на перевод.</p>
-          <p data-s="3">Помощник на настоящей языковой модели задаёт вопрос под конкретную схему. Здесь — русский интерфейс и другой сценарий.</p>
-          <p data-s="4">Данияр видит сумму, получателя и причины — и отклоняет.</p>
-          <p data-s="5">Деньги остались у Гульнары. А счёт мошенника помечен в межбанковском реестре.</p>
+          <p data-s="2">Запускается пятнадцатиминутная пауза, а её сыну Данияру уходит просьба посмотреть на перевод. Ему можно позвонить одной кнопкой.</p>
+          <p data-s="3">Помощник на настоящей языковой модели спрашивает, не звонит ли ей кто-то от имени банка, — и объясняет, как устроен этот обман.</p>
+          <p data-s="4">Данияр открывает просьбу — у него интерфейс на русском. Видит сумму, получателя и причины. И отклоняет перевод.</p>
+          <p data-s="5">Экран Гульнары переключается сам: перевод отклонён, полтора миллиона остались на счёте.</p>
         </aside>
       </section>
 
@@ -179,7 +179,7 @@
       </section>
 
       <!-- 7. Реестр -->
-      <section class="slide" id="s-ledger" data-title="Межбанковский реестр">
+      <section class="slide" id="s-ledger" data-film data-title="Межбанковский реестр">
         <p class="kicker">Межбанковский реестр · Hyperledger Fabric</p>
         <h2>Один банк остановил — другой уже знает.</h2>
         <div class="chain">
@@ -194,7 +194,7 @@
         <aside class="notes">
           <p data-s="0">Последняя часть — обмен между банками.</p>
           <p data-s="1">Когда Данияр отклонил перевод, Банк А помечает счёт получателя.</p>
-          <p data-s="2">Отметка уходит в общий реестр на Hyperledger Fabric. Там только ключевые хэши: без секрета консорциума номер счёта не восстановить.</p>
+          <p data-s="2" data-say="Отметка уходит в общий реестр на Хайперледжер Фабрик. Там только ключевые хэши: без секрета консорциума номер счёта не восстановить.">Отметка уходит в общий реестр на Hyperledger Fabric. Там только ключевые хэши: без секрета консорциума номер счёта не восстановить.</p>
           <p data-s="3">Клиент Банка Б, который переводит на тот же счёт, увидит предупреждение ещё до перевода — раньше, чем случится первая потеря.</p>
           <p data-s="4">И второе: в реестр пишется доказательство, что клиенту показали предупреждение и что он ответил. Это защищает в споре и клиента, и банк.</p>
         </aside>
@@ -252,7 +252,7 @@
       </section>
 
       <!-- 10. Финал -->
-      <section class="slide" id="s-end" data-title="Что дальше">
+      <section class="slide" id="s-end" data-film data-title="Что дальше">
         <p class="kicker">Что дальше</p>
         <h2>Сначала пауза. <span class="em">Потом перевод.</span></h2>
         <div class="plan">
@@ -262,9 +262,9 @@
         </div>
         <p class="links" data-in="2"><b>Sabyr</b> · приложение, код и описание — по ссылке на странице проекта. Спасибо!</p>
         <aside class="notes">
-          <p data-s="0">Сначала пауза — потом перевод. В этом весь Sabyr.</p>
-          <p data-s="1">Что дальше: пилот в банке с честным A/B-тестом, калибровка порогов на реальных данных и подключение к Антифрод-центру.</p>
-          <p data-s="2">Спасибо! Готовы показать приложение вживую и ответить на вопросы.</p>
+          <p data-s="0" data-say="Сначала пауза — потом перевод. В этом весь Сабыр.">Сначала пауза — потом перевод. В этом весь Sabyr.</p>
+          <p data-s="1" data-say="Что дальше: пилот в банке с честным сравнительным тестом, калибровка порогов на реальных данных и подключение к Антифрод-центру.">Что дальше: пилот в банке с честным A/B-тестом, калибровка порогов на реальных данных и подключение к Антифрод-центру.</p>
+          <p data-s="2">Спасибо, что посмотрели. Приложение можно открыть и попробовать самому.</p>
         </aside>
       </section>
 
@@ -274,10 +274,38 @@
     <div id="progress"><i></i></div>
     <span id="pos"></span>
     <a class="ctl" id="back" href="../" aria-label="На страницу проекта">Sabyr</a>
+    <a class="ctl" id="to-film" href="./" aria-label="Смотреть демо">Демо</a>
     <button class="ctl" id="fs-toggle" type="button" aria-label="Полный экран">Экран</button>
     <button class="ctl" id="cap-toggle" type="button" aria-label="Показать или скрыть текст">Текст</button>
     <button class="ctl" id="nav-prev" type="button" aria-label="Назад">‹</button>
     <button class="ctl" id="nav-next" type="button" aria-label="Вперёд">›</button>
+    <button id="start" type="button" aria-label="Смотреть демо">
+      <span class="go" aria-hidden="true"><svg viewBox="0 0 18 18"><path d="M3 1.6v14.8L16 9z" fill="currentColor"/></svg></span>
+      <span class="txt">Смотреть демо</span>
+      <span class="sub"><span id="start-len">2 мин</span> · со звуком · запись работающего приложения</span>
+    </button>
+    <div id="end" hidden>
+      <p>Сначала пауза — потом перевод.</p>
+      <div>
+        <button class="pill light" id="end-replay" type="button">Смотреть ещё раз</button>
+        <a class="pill" href="?slides">Все слайды</a>
+        <a class="pill" href="../../">Открыть приложение</a>
+      </div>
+    </div>
+    <div id="player">
+      <button class="plbtn" id="pl-play" type="button" data-state="paused" aria-label="Смотреть">
+        <svg class="i-play" viewBox="0 0 18 18" aria-hidden="true"><path d="M4 2v14l12-7z" fill="currentColor"/></svg>
+        <svg class="i-pause" viewBox="0 0 18 18" aria-hidden="true"><path d="M4 2h3.6v14H4zM10.400 2H14v14h-3.600z" fill="currentColor"/></svg>
+      </button>
+      <span class="pl-time" id="pl-cur">0:00</span>
+      <div id="pl-scrub" role="slider" aria-label="Перемотка"><div id="pl-track"><div id="pl-fill"></div></div></div>
+      <span class="pl-time" id="pl-dur">0:00</span>
+      <button class="plbtn txtbtn" id="pl-mute" type="button" data-state="on">Звук</button>
+      <button class="plbtn txtbtn" id="pl-cap" type="button">Текст</button>
+      <a class="plbtn txtbtn" id="pl-slides" href="?slides">Слайды</a>
+      <button class="plbtn txtbtn" id="pl-fs" type="button">Экран</button>
+    </div>
+    <p id="novoice" hidden>В этом браузере нет русского голоса — идут субтитры</p>
     <div id="hint"><b>→</b> или пробел — дальше · <b>F</b> — полный экран · <b>T</b> — текст · <b>P</b> — окно ведущего</div>
   </div>
   <div id="rotate">Поверните телефон горизонтально — так слайды крупнее</div>
