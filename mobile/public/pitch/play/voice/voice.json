@@ -1,86 +1,162 @@
 {
   "s-title-0": {
     "file": "s-title-0.mp3",
-    "dur": 5.85
+    "dur": 5.46,
+    "parts": [
+      0.72,
+      4.74
+    ]
   },
   "s-title-1": {
     "file": "s-title-1.mp3",
-    "dur": 5.7
+    "dur": 5.34,
+    "parts": [
+      2.6,
+      2.74
+    ]
   },
   "s-story-0": {
     "file": "s-story-0.mp3",
-    "dur": 5.5
+    "dur": 5.76,
+    "parts": [
+      2.35,
+      3.41
+    ]
   },
   "s-story-1": {
     "file": "s-story-1.mp3",
-    "dur": 4.27
+    "dur": 4.46,
+    "parts": [
+      4.46
+    ]
   },
   "s-story-2": {
     "file": "s-story-2.mp3",
-    "dur": 2.46
+    "dur": 2.59,
+    "parts": [
+      2.59
+    ]
   },
   "s-story-3": {
     "file": "s-story-3.mp3",
-    "dur": 3.58
+    "dur": 3.24,
+    "parts": [
+      3.24
+    ]
   },
   "s-story-4": {
     "file": "s-story-4.mp3",
-    "dur": 5.34
+    "dur": 5.32,
+    "parts": [
+      5.32
+    ]
   },
   "s-flow-0": {
     "file": "s-flow-0.mp3",
-    "dur": 7.22
+    "dur": 7.13,
+    "parts": [
+      2.46,
+      2.02,
+      2.65
+    ]
   },
   "s-flow-1": {
     "file": "s-flow-1.mp3",
-    "dur": 7.31
+    "dur": 8.0,
+    "parts": [
+      4.75,
+      3.25
+    ]
   },
   "s-flow-2": {
     "file": "s-flow-2.mp3",
-    "dur": 7.51
+    "dur": 9.23,
+    "parts": [
+      7.0,
+      2.23
+    ]
   },
   "s-flow-3": {
     "file": "s-flow-3.mp3",
-    "dur": 6.87
+    "dur": 7.48,
+    "parts": [
+      7.48
+    ]
   },
   "s-flow-4": {
     "file": "s-flow-4.mp3",
-    "dur": 7.07
+    "dur": 7.16,
+    "parts": [
+      3.44,
+      2.38,
+      1.35
+    ]
   },
   "s-flow-5": {
     "file": "s-flow-5.mp3",
-    "dur": 4.99
+    "dur": 5.2,
+    "parts": [
+      5.2
+    ]
   },
   "s-ledger-0": {
     "file": "s-ledger-0.mp3",
-    "dur": 2.48
+    "dur": 2.15,
+    "parts": [
+      2.15
+    ]
   },
   "s-ledger-1": {
     "file": "s-ledger-1.mp3",
-    "dur": 3.52
+    "dur": 4.37,
+    "parts": [
+      4.37
+    ]
   },
   "s-ledger-2": {
     "file": "s-ledger-2.mp3",
-    "dur": 7.93
+    "dur": 7.83,
+    "parts": [
+      3.66,
+      4.17
+    ]
   },
   "s-ledger-3": {
     "file": "s-ledger-3.mp3",
-    "dur": 6.84
+    "dur": 7.36,
+    "parts": [
+      7.36
+    ]
   },
   "s-ledger-4": {
     "file": "s-ledger-4.mp3",
-    "dur": 8.25
+    "dur": 8.87,
+    "parts": [
+      5.96,
+      2.91
+    ]
   },
   "s-end-0": {
     "file": "s-end-0.mp3",
-    "dur": 3.49
+    "dur": 3.2,
+    "parts": [
+      1.78,
+      1.43
+    ]
   },
   "s-end-1": {
     "file": "s-end-1.mp3",
-    "dur": 7.2
+    "dur": 7.19,
+    "parts": [
+      7.19
+    ]
   },
   "s-end-2": {
     "file": "s-end-2.mp3",
-    "dur": 4.59
+    "dur": 4.14,
+    "parts": [
+      1.73,
+      2.41
+    ]
   }
 }
