@@ -20,6 +20,7 @@ const DIST = path.join(__dirname, '..', 'dist');
 const SHOTS = process.env.E2E_SHOTS || path.join(__dirname, '..', '..', 'docs', 'screenshots');
 const DROP = 'KZ11SBA0000000007777';
 const FRIEND = 'KZ22SBA0000000001111';
+const FRIEND_PHONE = '8 700 000 00 59';   // телефон владелицы счёта FRIEND
 const VIEWPORT = { width: 412, height: 915 };
 
 const MIME = {
@@ -260,6 +261,9 @@ async function main() {
     check(/^1[45]:\d\d$/.test(timer), 'таймер паузы идёт', timer);
     await tid(g.page, 'trusted-pending').waitFor();
     check((await tid(g.page, 'trusted-pending').innerText()).includes('Данияр'), 'запрос доверенному лицу ожидает ответа');
+    check(/\d\d:\d\d/.test(await tid(g.page, 'trusted-until').innerText()), 'показано, до какого времени ждём ответа',
+      await tid(g.page, 'trusted-until').innerText());
+    check(await tid(g.page, 'trusted-call').isVisible(), 'есть кнопка «Позвонить» доверенному лицу');
     check(await tid(g.page, 'sabyr-confirm').isDisabled(), '«Всё равно перевести» недоступна');
     check(await tid(g.page, 'sabyr-cancel').isEnabled(), '«Отменить перевод» доступна');
     await tid(g.page, 'chat-assistant').first().waitFor({ timeout: 30000 });
@@ -353,7 +357,7 @@ async function main() {
     await tid(m.page, 'lang-ru').click();
     await m.page.getByText('Здравствуйте', { exact: false }).waitFor();
     check(true, 'переключатель языка: интерфейс стал русским');
-    await fillTransfer(m.page, FRIEND, 800000);
+    await fillTransfer(m.page, FRIEND_PHONE, 800000);   // получатель — по номеру телефона
     await top(m.page, 'transfer-continue').click();
     await Promise.race([tid(m.page, 'screen-sabyr').waitFor(), tid(m.page, 'screen-confirm').waitFor()]);
     if ((await tid(m.page, 'screen-sabyr').count()) === 0) {

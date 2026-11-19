@@ -94,6 +94,9 @@ export function createApi(cfg: ApiConfig) {
     incoming: () => request<{ items: IncomingRequest[] }>(cfg, 'GET', '/api/trusted/incoming').then((r) => r.items),
     respond: (requestId: number, decision: 'approve' | 'decline') =>
       request<IncomingRequest>(cfg, 'POST', '/api/trusted/respond', { request_id: requestId, decision }),
+    setContact: (phone: string, relation: string) =>
+      request<{ contact: Client['trusted_contact'] }>(cfg, 'PUT', '/api/trusted/contact', { phone, relation }),
+    removeContact: () => request<void>(cfg, 'DELETE', '/api/trusted/contact'),
     askTrusted: (transferId: string) =>
       request<IncomingRequest>(cfg, 'POST', '/api/trusted/request', { transfer_id: transferId }),
     assistant: (transferId: string, text?: string) =>

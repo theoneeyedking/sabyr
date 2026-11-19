@@ -135,7 +135,7 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
           />
           <Divider />
           <Tile
-            icon="users" title={t('home.trusted')} hint={pending > 0 ? t('home.trustedPending') : t('home.trustedHint')}
+            icon="users" title={t('home.trusted')} hint={pending > 0 ? t('home.trustedPending') : client.trusted_contact ? t('home.trustedHint') : t('home.trustedNone')}
             badge={pending} testID="tile-trusted" onPress={() => navigation.navigate('Trusted')}
           />
         </View>

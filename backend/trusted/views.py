@@ -86,7 +86,9 @@ def contact(request):
         return Response(status=204)
     if request.method == "PUT":
         data = parse(_ContactIn, request.data)
-        trusted = Client.objects.filter(phone=data["phone"]).first()
+        # номер принимается в любом написании: «8 700…», «+7 (700)…», 10 цифр
+        phone = services.normalize_phone(data["phone"]) or data["phone"].strip()
+        trusted = Client.objects.filter(phone=phone).first()
         if trusted is None or trusted.id == request.user.id:
             raise services.InterventionError("trusted_not_found", "Клиент с таким номером не найден", status=404)
         TrustedContact.objects.update_or_create(

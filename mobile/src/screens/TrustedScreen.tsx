@@ -1,26 +1,64 @@
 import { useIsFocused } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import type { IncomingRequest } from '../api/types';
 import { Icon } from '../components/Icon';
+import { PressableScale } from '../components/Motion';
 import { Body, Button, Caption, Card, Divider, ErrorNote, Heading, IconBadge, Loading, Pill, Screen } from '../components/ui';
 import { formatDateTime, type I18nKey } from '../i18n';
 import { ru } from '../i18n/ru';
+import { callNumber, clockTime, looksLikePhone } from '../lib/call';
 import { formatAccount, formatMoney } from '../lib/money';
 import { firstName } from '../lib/risk';
 import { usePolling } from '../lib/usePolling';
 import type { ScreenProps } from '../navigation';
 import { useApp } from '../state/AppContext';
-import { colors, font, fonts, levelColor, radius, shadow, space } from '../theme';
+import { colors, font, fonts, levelColor, noOutline, radius, shadow, space } from '../theme';
+
+const RELATIONS = ['son', 'daughter', 'spouse', 'relative', 'friend'] as const;
 
 /** Доверенное лицо: входящие просьбы проверить перевод и сведения о моём доверенном лице. */
 export function TrustedScreen({ navigation }: ScreenProps<'Trusted'>) {
-  const { api, client, t, describeError } = useApp();
+  const { api, client, t, describeError, refreshMe } = useApp();
   const focused = useIsFocused();
   const [items, setItems] = useState<IncomingRequest[] | null>(null);
   const [busy, setBusy] = useState<{ id: number; decision: 'approve' | 'decline' } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // привязка доверенного лица
+  const [editing, setEditing] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [relationCode, setRelationCode] = useState<string>('son');
+  const [saving, setSaving] = useState<'save' | 'remove' | null>(null);
+  const [contactError, setContactError] = useState<string | null>(null);
+
+  const saveContact = async () => {
+    setSaving('save');
+    setContactError(null);
+    try {
+      await api.setContact(phone.trim(), relationCode);
+      await refreshMe();
+      setEditing(false);
+      setPhone('');
+    } catch (e) {
+      setContactError(describeError(e));
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const removeContact = async () => {
+    setSaving('remove');
+    setContactError(null);
+    try {
+      await api.removeContact();
+      await refreshMe();
+    } catch (e) {
+      setContactError(describeError(e));
+    } finally {
+      setSaving(null);
+    }
+  };
 
   const load = useCallback(async () => {
     try {
@@ -91,6 +129,9 @@ export function TrustedScreen({ navigation }: ScreenProps<'Trusted'>) {
         return (
           <Card key={r.id} testID="trusted-request" style={styles.request} index={0}>
             <Heading>{t('trusted.requestTitle', { name: tr.sender_name })}</Heading>
+            {clockTime(r.expires_at) ? (
+              <Pill label={t('trusted.answerUntil', { time: clockTime(r.expires_at) })} fg={colors.medium} bg={colors.mediumSoft} icon="clock" />
+            ) : null}
             <View style={styles.amountBox}>
               <Caption>{t('trusted.amount')}</Caption>
               <Text style={styles.amount} adjustsFontSizeToFit numberOfLines={1}>{formatMoney(tr.amount)}</Text>
@@ -153,7 +194,7 @@ export function TrustedScreen({ navigation }: ScreenProps<'Trusted'>) {
 
       <Heading style={styles.section}>{t('trusted.mine')}</Heading>
       <Card testID="my-trusted">
-        {contact ? (
+        {contact && !editing ? (
           <>
             <View style={styles.person}>
               <IconBadge name="users" bg={colors.accentSoft} color={colors.accent} />
@@ -163,9 +204,61 @@ export function TrustedScreen({ navigation }: ScreenProps<'Trusted'>) {
               </View>
             </View>
             <Body soft style={styles.small}>{t('trusted.mineHint')}</Body>
+            <Button
+              label={t('trusted.call')} variant="secondary" icon="phone" onPress={() => callNumber(contact.phone)}
+              testID="my-trusted-call"
+            />
+            <View style={styles.links}>
+              <PressableScale
+                onPress={() => { setEditing(true); setContactError(null); }} style={styles.link}
+                accessibilityRole="button" testID="my-trusted-change"
+              >
+                <Text style={styles.linkText}>{t('trusted.change')}</Text>
+              </PressableScale>
+              <PressableScale
+                onPress={() => void removeContact()} disabled={saving != null} style={styles.link}
+                accessibilityRole="button" testID="my-trusted-remove"
+              >
+                <Text style={[styles.linkText, styles.linkSoft]}>{t('trusted.remove')}</Text>
+              </PressableScale>
+            </View>
+            <ErrorNote text={contactError} />
           </>
         ) : (
-          <Body soft>{t('trusted.mineNone')}</Body>
+          <>
+            {!contact ? <Body soft testID="my-trusted-none">{t('trusted.mineNone')}</Body> : null}
+            <Text style={styles.strong}>{t('trusted.addTitle')}</Text>
+            <Body soft style={styles.small}>{t('trusted.mineHint')}</Body>
+            <Caption>{t('trusted.phoneLabel')}</Caption>
+            <TextInput
+              value={phone} onChangeText={setPhone} placeholder={t('trusted.phonePlaceholder')}
+              placeholderTextColor={colors.disabled} keyboardType="phone-pad" inputMode="tel" style={styles.input}
+              accessibilityLabel={t('trusted.phoneLabel')} testID="trusted-phone"
+            />
+            <Caption>{t('trusted.relationLabel')}</Caption>
+            <View style={styles.chips}>
+              {RELATIONS.map((code) => {
+                const on = code === relationCode;
+                return (
+                  <PressableScale
+                    key={code} onPress={() => setRelationCode(code)} scaleTo={0.94} accessibilityRole="button"
+                    accessibilityState={{ selected: on }} style={[styles.chip, on && styles.chipOn]}
+                    testID={`relation-${code}`}
+                  >
+                    <Text style={[styles.chipText, on && styles.chipTextOn]}>{t(`relation.${code}` as I18nKey)}</Text>
+                  </PressableScale>
+                );
+              })}
+            </View>
+            <ErrorNote text={contactError} />
+            <Button
+              label={t('trusted.add')} onPress={() => void saveContact()} loading={saving === 'save'}
+              disabled={!looksLikePhone(phone) || saving != null} testID="trusted-save"
+            />
+            {contact ? (
+              <Button label={t('common.back')} variant="ghost" onPress={() => setEditing(false)} testID="trusted-edit-cancel" />
+            ) : null}
+          </>
         )}
       </Card>
 
@@ -183,10 +276,11 @@ export function TrustedScreen({ navigation }: ScreenProps<'Trusted'>) {
             <Card key={r.id} testID="trusted-earlier">
               <Text style={styles.strong}>{r.transfer.sender_name} · {formatMoney(r.transfer.amount)}</Text>
               <Pill
-                label={t(r.status === 'approved' ? 'trusted.youApproved' : 'trusted.youDeclined')}
-                fg={r.status === 'approved' ? colors.inkSoft : colors.accent}
-                bg={r.status === 'approved' ? colors.disabledBg : colors.accentSoft}
-                icon={r.status === 'approved' ? undefined : 'shieldCheck'}
+                label={t(r.status === 'approved' ? 'trusted.youApproved'
+                  : r.status === 'expired' ? 'trusted.youMissed' : 'trusted.youDeclined')}
+                fg={r.status === 'declined' ? colors.accent : colors.inkSoft}
+                bg={r.status === 'declined' ? colors.accentSoft : colors.disabledBg}
+                icon={r.status === 'declined' ? 'shieldCheck' : undefined}
               />
               {r.responded_at ? <Text style={styles.account}>{formatDateTime(r.responded_at)}</Text> : null}
             </Card>
@@ -199,6 +293,23 @@ export function TrustedScreen({ navigation }: ScreenProps<'Trusted'>) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  input: {
+    minHeight: 60, borderRadius: radius.inner, borderWidth: 1.5, borderColor: colors.lineStrong,
+    backgroundColor: colors.surfaceSoft, paddingHorizontal: space.md, ...noOutline,
+    fontFamily: fonts.semibold, fontSize: font.lead, color: colors.ink,
+  },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+  chip: {
+    minHeight: 48, paddingHorizontal: 18, borderRadius: radius.chip, justifyContent: 'center',
+    backgroundColor: colors.primarySoft,
+  },
+  chipOn: { backgroundColor: colors.primary },
+  chipText: { fontFamily: fonts.semibold, fontSize: font.small + 1, color: colors.primary },
+  chipTextOn: { color: colors.onPrimary },
+  links: { flexDirection: 'row', justifyContent: 'center', gap: space.lg },
+  link: { minHeight: 48, justifyContent: 'center', paddingHorizontal: space.sm },
+  linkText: { fontFamily: fonts.semibold, fontSize: font.small + 1, color: colors.primary },
+  linkSoft: { color: colors.inkSoft },
   request: { gap: space.md, ...shadow.raised },
   amountBox: { gap: 2 },
   amount: {

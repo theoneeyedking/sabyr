@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { TransferState } from '../api/types';
+import { BANK_PHONE, callNumber } from '../lib/call';
 import { formatMoney } from '../lib/money';
 import { firstName } from '../lib/risk';
 import { useApp } from '../state/AppContext';
@@ -32,7 +33,9 @@ export function FinalState({ transfer, onReport }: {
     text = trustedName ? t('final.declinedText', { name: trustedName }) : t('final.declinedTextNoName');
   } else {
     title = t('final.cancelledTitle');
-    text = t('final.cancelledText');
+    // доверенное лицо не ответило вовремя — перевод отменён автоматически
+    text = transfer.trusted_request?.status === 'expired' && trustedName
+      ? t('final.expiredText', { name: trustedName }) : t('final.cancelledText');
   }
   const good = status === 'confirmed';
   const protectedMoney = status === 'declined' || status === 'cancelled';
@@ -104,6 +107,10 @@ export function FinalState({ transfer, onReport }: {
           <Card>
             <Caption>{t('final.adviceTitle')}</Caption>
             <Heading style={styles.adviceText}>{t('final.advice')}</Heading>
+            <Button
+              label={t('final.callBank')} variant="secondary" icon="phone" onPress={() => callNumber(BANK_PHONE)}
+              testID="final-call-bank"
+            />
           </Card>
         </Reveal>
       ) : null}

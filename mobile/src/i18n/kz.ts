@@ -42,8 +42,8 @@ export const kz: Record<I18nKey, string> = {
   'home.protected': 'Sabyr қорғап тұр',
 
   'transfer.title': 'Аударым',
-  'transfer.recipient': 'Алушының шот нөмірі',
-  'transfer.recipientPlaceholder': 'KZ…',
+  'transfer.recipient': 'Алушының телефоны немесе шоты',
+  'transfer.recipientPlaceholder': '+7… немесе KZ…',
   'transfer.amount': 'Сома, ₸',
   'transfer.amountPlaceholder': '0',
   'transfer.available': 'Қолжетімді: {amount}',
@@ -167,7 +167,7 @@ export const kz: Record<I18nKey, string> = {
   'level.high': 'Жоғары',
 
   'error.network': 'Сервермен байланыс жоқ. Интернетті тексеріп, қайталап көріңіз.',
-  'error.recipient_not_found': 'Алушының шоты табылмады. Нөмірді тексеріңіз.',
+  'error.recipient_not_found': 'Алушы табылмады. Телефон немесе шот нөмірін тексеріңіз.',
   'error.insufficient_funds': 'Шотта ақша жеткіліксіз.',
   'error.same_account': 'Өз шотыңызға ақша аударуға болмайды.',
   'error.cooldown_active': 'Үзіліс әлі аяқталған жоқ.',
@@ -177,7 +177,7 @@ export const kz: Record<I18nKey, string> = {
   'error.already_responded': 'Бұл өтінішке жауап беріліп қойған.',
   'error.dialog_finished': 'Көмекшімен әңгіме аяқталған.',
   'error.unauthorized': 'Сессия аяқталды. Қайта кіріңіз.',
-  'error.invalid': 'Шот нөмірі мен соманы тексеріңіз.',
+  'error.invalid': 'Алушының нөмірі мен соманы тексеріңіз.',
   'error.unknown': 'Бірдеңе дұрыс болмады. Қайталап көріңіз.',
 
   'demo.title': 'Демо-мәзір',
@@ -204,4 +204,23 @@ export const kz: Record<I18nKey, string> = {
   'demo.unknown': 'белгісіз',
   'demo.willSend': 'Тексеруге жіберіледі',
   'demo.session': 'Сессиядағы секунд',
+
+  // звонок, срок ответа и привязка доверенного лица
+  'home.trustedNone': 'Қосылмаған — қосу үшін басыңыз',
+  'sabyr.trustedUntil': 'Жауапты {time} дейін күтеміз. Жауап болмаса, аударым тоқтатылады, ақша өзіңізде қалады.',
+  'sabyr.callTrusted': 'Қоңырау шалу: {name}',
+  'sabyr.trustedNoneHint': 'Басты беттегі «Сенімді тұлға» бөлімінде жақын адамыңызды қосыңыз — мұндай жағдайда ол көмектеседі.',
+  'final.expiredText': '{name} уақытында жауап бермеді, сондықтан аударым тоқтатылды. Ақша шотыңызда қалды.',
+  'final.callBank': 'Банкке қоңырау шалу',
+  'trusted.addTitle': 'Жақын адамды қосу',
+  'trusted.phoneLabel': 'Сол адамның телефон нөмірі',
+  'trusted.phonePlaceholder': '+7 700 000 00 00',
+  'trusted.relationLabel': 'Ол сізге кім болады',
+  'trusted.add': 'Қосу',
+  'trusted.change': 'Өзгерту',
+  'trusted.remove': 'Ажырату',
+  'trusted.call': 'Қоңырау шалу',
+  'trusted.answerUntil': '{time} дейін жауап беріңіз — әйтпесе аударым тоқтатылады',
+  'trusted.youMissed': 'Жауап беріп үлгермедіңіз, аударым тоқтатылды',
+  'error.trusted_not_found': 'Мұндай нөмірлі клиент табылмады. Нөмірді тексеріңіз.',
 };

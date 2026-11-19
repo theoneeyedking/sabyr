@@ -10,6 +10,7 @@ import { Breathing, Reveal } from '../components/Motion';
 import { RiskGauge } from '../components/RiskGauge';
 import { Body, Button, Caption, Card, ErrorNote, Heading, Screen, Title } from '../components/ui';
 import type { I18nKey } from '../i18n';
+import { callNumber, clockTime } from '../lib/call';
 import { cooldownDeadline, formatCountdown, secondsUntil } from '../lib/countdown';
 import { flaggingBanks } from '../lib/ledger';
 import { formatAccount, formatMoney } from '../lib/money';
@@ -140,17 +141,31 @@ export function SabyrScreen({ navigation, route }: ScreenProps<'Sabyr'>) {
       }
     >
       <Reveal style={styles.hero}>
-        <View style={styles.pauseWrap}>
-          <Breathing color={tone.vivid} size={64} />
-          <View style={[styles.pauseIcon, { backgroundColor: tone.fg }]}>
-            <Icon name="pause" size={30} color={colors.onPrimary} stroke={2.6} />
+        <View style={styles.heroHead}>
+          <View style={styles.pauseWrap}>
+            <Breathing color={tone.vivid} size={56} spread={1.45} />
+            <View style={[styles.pauseIcon, { backgroundColor: tone.fg }]}>
+              <Icon name="pause" size={27} color={colors.onPrimary} stroke={2.6} />
+            </View>
           </View>
+          <Title style={styles.headline}>{t(high ? 'sabyr.headlineHigh' : 'sabyr.headlineMedium')}</Title>
         </View>
-        <Title style={styles.headline}>{t(high ? 'sabyr.headlineHigh' : 'sabyr.headlineMedium')}</Title>
         <Body soft style={styles.intro}>{t(high ? 'sabyr.introHigh' : 'sabyr.introMedium')}</Body>
       </Reveal>
 
-      <Card index={1}>
+      <Card testID="reasons" index={1}>
+        <Heading>{t('sabyr.reasons')}</Heading>
+        {transfer.risk.reasons.map((r, i) => (
+          <View key={r.code + i} style={styles.reason}>
+            <View style={[styles.reasonNum, { backgroundColor: tone.bg }]}>
+              <Text style={[styles.reasonNumText, { color: tone.fg }]}>{i + 1}</Text>
+            </View>
+            <Body style={styles.flex} testID="reason">{r.text}</Body>
+          </View>
+        ))}
+      </Card>
+
+      <Card index={2}>
         <Caption>{t('sabyr.transferTo')}</Caption>
         <Text style={styles.amount} testID="sabyr-amount" adjustsFontSizeToFit numberOfLines={1}>
           {formatMoney(transfer.amount)}
@@ -188,18 +203,6 @@ export function SabyrScreen({ navigation, route }: ScreenProps<'Sabyr'>) {
         />
       </Card>
 
-      <Card testID="reasons" index={4}>
-        <Heading>{t('sabyr.reasons')}</Heading>
-        {transfer.risk.reasons.map((r, i) => (
-          <View key={r.code + i} style={styles.reason}>
-            <View style={[styles.reasonNum, { backgroundColor: tone.bg }]}>
-              <Text style={[styles.reasonNumText, { color: tone.fg }]}>{i + 1}</Text>
-            </View>
-            <Body style={styles.flex} testID="reason">{r.text}</Body>
-          </View>
-        ))}
-      </Card>
-
       {transfer.cooldown_until ? (
         <Card style={styles.cooldown} testID="cooldown" index={5}>
           <Heading style={styles.center}>{t('sabyr.cooldown')}</Heading>
@@ -234,13 +237,36 @@ export function SabyrScreen({ navigation, route }: ScreenProps<'Sabyr'>) {
                 : req.status === 'approved' ? 'sabyr.trustedApproved' : 'sabyr.trustedDeclined', { name: trustedName })}
             </Text>
           </View>
+          {req.status === 'pending' ? (
+            <>
+              {clockTime(req.expires_at) ? (
+                <Body soft style={styles.trustedUntil} testID="trusted-until">
+                  {t('sabyr.trustedUntil', { time: clockTime(req.expires_at) })}
+                </Body>
+              ) : null}
+              {req.trusted_phone ? (
+                <Button
+                  label={t('sabyr.callTrusted', { name: trustedName })} variant="secondary" icon="phone"
+                  onPress={() => callNumber(req.trusted_phone as string)} testID="trusted-call"
+                />
+              ) : null}
+            </>
+          ) : null}
         </Card>
       ) : client?.trusted_contact ? (
         <Button
           label={t('sabyr.trustedAsk', { name: firstName(client.trusted_contact.name) })} variant="secondary"
           onPress={() => void askTrusted()} loading={busy === 'ask'} disabled={busy != null} testID="trusted-ask"
         />
-      ) : null}
+      ) : (
+        <Reveal index={6} style={styles.noTrusted}>
+          <Icon name="users" size={22} color={colors.inkSoft} />
+          <View style={styles.flex}>
+            <Text style={styles.noTrustedTitle}>{t('sabyr.trustedNone')}</Text>
+            <Text style={styles.noTrustedText} testID="trusted-none">{t('sabyr.trustedNoneHint')}</Text>
+          </View>
+        </Reveal>
+      )}
 
       {scheme ? (
         <Card testID="scheme" index={7} style={styles.scheme}>
@@ -295,14 +321,22 @@ function CooldownRing({ left, children }: { left: number; children: React.ReactN
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { textAlign: 'center' },
-  hero: { gap: space.sm, paddingTop: space.xs, paddingBottom: space.sm },
-  pauseWrap: { width: 64, height: 64, alignItems: 'center', justifyContent: 'center', marginBottom: space.sm, marginLeft: 6 },
+  hero: { gap: space.sm, paddingTop: space.md, paddingBottom: space.xs },
+  heroHead: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingLeft: 10 },
+  pauseWrap: { width: 56, height: 56, alignItems: 'center', justifyContent: 'center' },
   pauseIcon: {
-    width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center',
+    width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center',
     boxShadow: '0 10px 24px rgba(15,39,66,0.22)',
   },
-  headline: { fontSize: 34, lineHeight: 39, letterSpacing: -1.3 },
-  intro: { fontSize: font.body + 1, lineHeight: 28 },
+  headline: { flex: 1, fontSize: 30, lineHeight: 35, letterSpacing: -1.1 },
+  intro: { fontSize: font.body, lineHeight: 27 },
+  trustedUntil: { fontSize: font.small, lineHeight: 23 },
+  noTrusted: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: space.sm + 2,
+    backgroundColor: 'rgba(15,27,42,0.05)', borderRadius: radius.button, padding: space.md,
+  },
+  noTrustedTitle: { fontFamily: fonts.semibold, fontSize: font.small + 1, lineHeight: 24, color: colors.ink },
+  noTrustedText: { fontFamily: fonts.regular, fontSize: font.small, lineHeight: 23, color: colors.inkSoft },
   amount: {
     fontFamily: fonts.extra, fontSize: font.huge, lineHeight: 50, letterSpacing: -1.4, color: colors.ink,
     fontVariant: ['tabular-nums'],

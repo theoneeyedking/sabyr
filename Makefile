@@ -18,6 +18,7 @@ demo-reset: .env ## Чистый лист для повторного показ
 	./ledger/network/down.sh
 	./ledger/network/up.sh
 	$(COMPOSE) --profile ledger up -d --force-recreate ledger-gateway
+	$(COMPOSE) up -d --wait db backend   # после перезагрузки машины backend может быть остановлен
 	$(MAKE) seed
 
 demo-check: ## Сценарий демо по HTTP против запущенного стенда

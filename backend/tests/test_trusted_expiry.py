@@ -89,3 +89,12 @@ def test_unknown_phone_is_not_found(gulnara, ledger, fixed_score):
     r = gulnara.post("/api/transfers/check", {"recipient_account": "+7 701 999 88 77", "amount": "20000",
                                               "signals": QUIET}, format="json")
     assert r.status_code == 404 and r.json()["error"]["code"] == "recipient_not_found"
+
+
+def test_bind_trusted_contact_by_phone_in_any_format(aidos):
+    r = aidos.put("/api/trusted/contact", {"phone": "8 (700) 000-00-59", "relation": "friend"}, format="json")
+    assert r.status_code == 200 and r.json()["contact"]["phone"] == "+77000000059"
+    assert aidos.get("/api/me").json()["trusted_contact"]["relation"] == "friend"
+    assert aidos.delete("/api/trusted/contact").status_code == 204
+    assert aidos.get("/api/me").json()["trusted_contact"] is None
+    assert aidos.put("/api/trusted/contact", {"phone": "+7 701 999 88 77"}, format="json").status_code == 404

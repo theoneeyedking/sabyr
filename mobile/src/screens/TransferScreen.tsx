@@ -6,6 +6,7 @@ import { PressableScale, Reveal } from '../components/Motion';
 import { Button, Caption, ErrorNote, Screen } from '../components/ui';
 import { formatAmountInput, formatMoney, normalizeAccount, parseAmountInput } from '../lib/money';
 import { recentRecipients, type Recipient } from '../lib/protection';
+import { looksLikePhone } from '../lib/call';
 import type { ScreenProps } from '../navigation';
 import { useApp } from '../state/AppContext';
 import { colors, font, fonts, radius, shadow, space, noOutline } from '../theme';
@@ -36,7 +37,8 @@ export function TransferScreen({ navigation }: ScreenProps<'Transfer'>) {
   }, [prefillAccount, setPrefillAccount]);
 
   const value = parseAmountInput(amount);
-  const ready = normalizeAccount(account).length >= 8 && value > 0;
+  // Получатель — номер телефона или номер счёта; что именно, решает сервер.
+  const ready = (looksLikePhone(account) || normalizeAccount(account).length >= 16) && value > 0;
 
   const submit = async () => {
     if (!ready || busy) return;

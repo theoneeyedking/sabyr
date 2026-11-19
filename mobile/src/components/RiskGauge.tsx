@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   wrap: { gap: space.sm },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.md },
   caption: { fontFamily: fonts.medium, fontSize: font.small, color: colors.inkSoft },
-  gauge: { width: '100%', maxWidth: 360, alignSelf: 'center', aspectRatio: W / H, marginTop: space.xs },
+  gauge: { width: '100%', maxWidth: 300, alignSelf: 'center', aspectRatio: W / H, marginTop: space.xs },
   center: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'flex-end' },
   score: {
     fontFamily: fonts.extra, fontSize: 68, lineHeight: 70, letterSpacing: -2.5, fontVariant: ['tabular-nums'],

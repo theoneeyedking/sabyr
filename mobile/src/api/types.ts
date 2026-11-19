@@ -21,7 +21,14 @@ export type Client = {
 export type Reason = { code: string; text: string; ru?: string; kz?: string; source?: 'llm' | 'partial' | 'template' };
 export type Scheme = { code: string; title: string; how: string };
 export type Recipient = { account: string; name: string; bank: string };
-export type TrustedRequestBrief = { id: number; status: 'pending' | 'approved' | 'declined'; trusted_name: string };
+export type TrustedRequestBrief = {
+  id: number;
+  status: 'pending' | 'approved' | 'declined' | 'expired';
+  trusted_name: string;
+  trusted_phone?: string;
+  /** До этого времени ждём ответа доверенного лица; потом перевод отменяется. */
+  expires_at?: string;
+};
 export type Blocker = { code: string; message: string; seconds_left?: number };
 
 export type LedgerFlag = {
@@ -73,9 +80,10 @@ export type HistoryItem = {
 
 export type IncomingRequest = {
   id: number;
-  status: 'pending' | 'approved' | 'declined';
+  status: 'pending' | 'approved' | 'declined' | 'expired';
   created_at: string;
   responded_at: string | null;
+  expires_at?: string;
   transfer: {
     transfer_id: string;
     status: TransferStatus;

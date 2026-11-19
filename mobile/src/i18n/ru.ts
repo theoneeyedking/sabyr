@@ -40,8 +40,8 @@ export const ru = {
   'home.protected': 'Sabyr на защите',
 
   'transfer.title': 'Перевод',
-  'transfer.recipient': 'Номер счёта получателя',
-  'transfer.recipientPlaceholder': 'KZ…',
+  'transfer.recipient': 'Телефон или счёт получателя',
+  'transfer.recipientPlaceholder': '+7… или KZ…',
   'transfer.amount': 'Сумма, ₸',
   'transfer.amountPlaceholder': '0',
   'transfer.available': 'Доступно: {amount}',
@@ -165,7 +165,7 @@ export const ru = {
   'level.high': 'Высокий',
 
   'error.network': 'Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.',
-  'error.recipient_not_found': 'Счёт получателя не найден. Проверьте номер.',
+  'error.recipient_not_found': 'Получатель не найден. Проверьте номер телефона или счёта.',
   'error.insufficient_funds': 'На счёте недостаточно денег.',
   'error.same_account': 'Нельзя перевести деньги на свой же счёт.',
   'error.cooldown_active': 'Пауза ещё не закончилась.',
@@ -175,7 +175,7 @@ export const ru = {
   'error.already_responded': 'На эту просьбу уже ответили.',
   'error.dialog_finished': 'Разговор с помощником уже закончен.',
   'error.unauthorized': 'Сессия закончилась. Войдите заново.',
-  'error.invalid': 'Проверьте номер счёта и сумму.',
+  'error.invalid': 'Проверьте номер получателя и сумму.',
   'error.unknown': 'Что-то пошло не так. Попробуйте ещё раз.',
 
   'demo.title': 'Демо-меню',
@@ -202,6 +202,25 @@ export const ru = {
   'demo.unknown': 'неизвестно',
   'demo.willSend': 'Уйдёт в проверку',
   'demo.session': 'Секунд в сессии',
+
+  // звонок, срок ответа и привязка доверенного лица
+  'home.trustedNone': 'Не привязано — нажмите, чтобы добавить',
+  'sabyr.trustedUntil': 'Ждём ответа до {time}. Без ответа перевод отменится, деньги останутся у вас.',
+  'sabyr.callTrusted': 'Позвонить: {name}',
+  'sabyr.trustedNoneHint': 'Добавьте близкого человека на главной, в разделе «Доверенное лицо» — в такой ситуации он поможет.',
+  'final.expiredText': '{name} не ответил(а) вовремя, поэтому перевод отменён. Деньги остались на вашем счёте.',
+  'final.callBank': 'Позвонить в банк',
+  'trusted.addTitle': 'Привязать близкого человека',
+  'trusted.phoneLabel': 'Номер телефона этого человека',
+  'trusted.phonePlaceholder': '+7 700 000 00 00',
+  'trusted.relationLabel': 'Кем он вам приходится',
+  'trusted.add': 'Привязать',
+  'trusted.change': 'Изменить',
+  'trusted.remove': 'Отвязать',
+  'trusted.call': 'Позвонить',
+  'trusted.answerUntil': 'Ответьте до {time} — иначе перевод отменится',
+  'trusted.youMissed': 'Вы не успели ответить, перевод отменён',
+  'error.trusted_not_found': 'Клиент с таким номером не найден. Проверьте номер.',
 } as const;
 
 export type I18nKey = keyof typeof ru;

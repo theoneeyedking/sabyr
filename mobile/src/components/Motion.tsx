@@ -57,7 +57,7 @@ export function PressableScale({
 }
 
 /** Медленно расходящиеся кольца — «дыхание» вокруг значка паузы. */
-export function Breathing({ color, size }: { color: string; size: number }) {
+export function Breathing({ color, size, spread = 1.9 }: { color: string; size: number; spread?: number }) {
   const a = useRef(new Animated.Value(0)).current;
   const b = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -76,7 +76,7 @@ export function Breathing({ color, size }: { color: string; size: number }) {
   const ring = (v: Animated.Value) => ({
     width: size, height: size, borderRadius: size / 2, backgroundColor: color,
     opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.32, 0] }),
-    transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [1, 1.9] }) }],
+    transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [1, spread] }) }],
   });
   return (
     <View style={[StyleSheet.absoluteFill, styles.center]}>
