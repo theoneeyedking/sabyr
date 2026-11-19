@@ -163,7 +163,7 @@
 
   // ---------- фильм ----------
   const film = {
-    seq: [], k: 0, playing: false, token: 0, stepStart: 0, muted: false, clips: {}, voice: {}, audio: new Audio(), timers: [], players: {},
+    seq: [], k: 0, playing: false, token: 0, stepStart: 0, muted: false, clips: {}, voice: {}, audio: new Audio(), timers: [], urls: {},
   };
 
   /** Сколько длится шаг: записанная дорожка или оценка по длине реплики, но не короче видео на экране. */
@@ -234,16 +234,19 @@
 
   /** Произносит реплику и вызывает done по окончании. Возвращает название способа (для подсказки). */
   function speak(entry, done) {
-    const fallback = () => { wordsByClock(entry, entry.dur - GAP); film.timers.push(setTimeout(done, (entry.dur - GAP) * 1000)); };
+    const my = film.token;
+    const live = (fn) => () => { if (my === film.token) fn(); }; // шаг уже сменился — запоздавшие события дорожки не нужны
+    const fallback = live(() => { wordsByClock(entry, entry.dur - GAP); film.timers.push(setTimeout(done, (entry.dur - GAP) * 1000)); });
     if (film.muted) { fallback(); return 'mute'; }
     const clip = film.voice[entry.key];
     if (clip) {
-      const player = film.players[entry.key] ?? new Audio(`voice/${clip.file}`);
-      film.audio = player;
-      player.currentTime = 0;
-      player.onended = done;
+      // Все реплики играет ОДИН элемент: Safari на iPhone разрешает звук только тому элементу, который запущен
+      // касанием. Отдельный Audio на каждую реплику замолкал бы после первой — следующие стартуют уже по таймеру.
+      const player = film.audio;
+      player.onended = live(done);
       player.onerror = fallback;
-      player.onplaying = () => { player.onplaying = null; wordsByParts(entry, clip); }; // подсветка — с первым звуком
+      player.onplaying = live(() => { player.onplaying = null; wordsByParts(entry, clip); }); // подсветка — с первым звуком
+      player.src = film.urls[entry.key] ?? `voice/${clip.file}`;
       player.play().catch(fallback);
       return 'clip';
     }
@@ -348,11 +351,12 @@
     fit();
     addEventListener('resize', fit);
     [film.clips, film.voice] = await Promise.all([loadJson('../video/clips.json'), loadJson('voice/voice.json')]);
-    // дорожки грузятся заранее, чтобы голос не запаздывал на загрузку в начале каждой реплики
+    // дорожки грузятся заранее (в память), чтобы голос не запаздывал на загрузку в начале каждой реплики
+    film.audio.preload = 'auto';
     for (const [key, clip] of Object.entries(film.voice)) {
-      const player = new Audio(`voice/${clip.file}`);
-      player.preload = 'auto';
-      film.players[key] = player;
+      fetch(`voice/${clip.file}`).then((res) => (res.ok ? res.blob() : null))
+        .then((blob) => { if (blob) film.urls[key] = URL.createObjectURL(blob); })
+        .catch(() => {}); // не загрузилась заранее — элемент возьмёт её по адресу
     }
     buildFilm();
     $('#pl-dur').textContent = clock(film.total);
