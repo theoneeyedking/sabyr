@@ -55,11 +55,15 @@ def main() -> None:
         print(f"Всего реплик: {len(script)}. Файлы кладите в {VOICE}")
         return
     VOICE.mkdir(exist_ok=True)
+    parts_file = VOICE / "parts.json"   # пишет scripts/pitch_tts.sh
+    parts = json.loads(parts_file.read_text(encoding="utf-8")) if parts_file.exists() else {}
     manifest = {}
     for key, _ in script:
         found = next((VOICE / f"{key}{ext}" for ext in EXTENSIONS if (VOICE / f"{key}{ext}").exists()), None)
         if found:
             manifest[key] = {"file": found.name, "dur": duration(found)}
+            if key in parts:   # длительность каждого предложения — для точной подсветки слов в субтитрах
+                manifest[key]["parts"] = parts[key]
     (VOICE / "voice.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"Записано дорожек: {len(manifest)} из {len(script)}; остальные прочитает голос браузера.")
 

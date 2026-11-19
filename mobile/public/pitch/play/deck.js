@@ -16,7 +16,7 @@
   const W = 1920;
   const H = 1080;
   const BUDGET = 5 * 60; // секунд на выступление (окно ведущего)
-  const GAP = 0.45;      // пауза между репликами в фильме, с
+  const GAP = 0.3;       // пауза между репликами в фильме, с
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
   const params = new URLSearchParams(location.search);
@@ -163,7 +163,7 @@
 
   // ---------- фильм ----------
   const film = {
-    seq: [], k: 0, playing: false, token: 0, stepStart: 0, muted: false, clips: {}, voice: {}, audio: new Audio(), timers: [],
+    seq: [], k: 0, playing: false, token: 0, stepStart: 0, muted: false, clips: {}, voice: {}, audio: new Audio(), timers: [], players: {},
   };
 
   /** Сколько длится шаг: записанная дорожка или оценка по длине реплики, но не короче видео на экране. */
@@ -194,17 +194,34 @@
   /** Подсвечивает слова субтитров до n-го включительно. */
   const litWords = (n) => $$('#cap .w').forEach((el, idx) => el.classList.toggle('on', idx <= n));
   /** Подсветка по времени, пропорционально длине слов (когда точных отметок от голоса нет). */
-  function wordsByClock(entry, seconds) {
-    const words = entry.text.split(' ').filter(Boolean);
-    const total = words.reduce((acc, w) => acc + w.length + 1, 0);
+  const weight = (word) => word.length + 1 + (/[,;:—–]$/.test(word) || word === '—' ? 3 : 0);
+  /** Подсвечивает слова words (с номера first) равномерно по их длине за seconds секунд, начиная через delay. */
+  function spread(words, first, seconds, delay = 0) {
+    const total = words.reduce((acc, w) => acc + weight(w), 0);
     let before = 0;
-    const ids = [];
-    words.forEach((w, n) => {
-      ids.push(setTimeout(() => litWords(n), (before / total) * seconds * 1000));
-      before += w.length + 1;
+    const ids = words.map((w, n) => {
+      const id = setTimeout(() => litWords(first + n), (delay + (before / total) * seconds) * 1000);
+      before += weight(w);
+      return id;
     });
     film.timers.push(...ids);
     return ids;
+  }
+  /** Подсветка по времени, когда точных отметок от голоса нет. */
+  const wordsByClock = (entry, seconds) => spread(entry.text.split(' ').filter(Boolean), 0, seconds);
+  /** Подсветка по предложениям: parts — длительность каждого предложения в записанной дорожке. */
+  function wordsByParts(entry, clip) {
+    const sentences = entry.text.match(/[^.!?…]+[.!?…]+[»")]*\s*|[^.!?…]+$/g) ?? [entry.text];
+    if (!clip.parts || clip.parts.length !== sentences.length) return wordsByClock(entry, clip.dur);
+    let first = 0;
+    let delay = 0;
+    sentences.forEach((sentence, n) => {
+      const words = sentence.split(' ').filter(Boolean);
+      spread(words, first, clip.parts[n] * 0.94, delay);
+      first += words.length;
+      delay += clip.parts[n];
+    });
+    return [];
   }
 
   // Русские голоса браузера сильно различаются по качеству: «нейронные» и сетевые звучат заметно лучше системных.
@@ -221,10 +238,13 @@
     if (film.muted) { fallback(); return 'mute'; }
     const clip = film.voice[entry.key];
     if (clip) {
-      film.audio.src = `voice/${clip.file}`;
-      film.audio.onended = done;
-      film.audio.onerror = fallback;
-      film.audio.play().then(() => wordsByClock(entry, clip.dur)).catch(fallback);
+      const player = film.players[entry.key] ?? new Audio(`voice/${clip.file}`);
+      film.audio = player;
+      player.currentTime = 0;
+      player.onended = done;
+      player.onerror = fallback;
+      player.onplaying = () => { player.onplaying = null; wordsByParts(entry, clip); }; // подсветка — с первым звуком
+      player.play().catch(fallback);
       return 'clip';
     }
     const voice = ruVoice();
@@ -326,6 +346,12 @@
     fit();
     addEventListener('resize', fit);
     [film.clips, film.voice] = await Promise.all([loadJson('../video/clips.json'), loadJson('voice/voice.json')]);
+    // дорожки грузятся заранее, чтобы голос не запаздывал на загрузку в начале каждой реплики
+    for (const [key, clip] of Object.entries(film.voice)) {
+      const player = new Audio(`voice/${clip.file}`);
+      player.preload = 'auto';
+      film.players[key] = player;
+    }
     buildFilm();
     $('#pl-dur').textContent = clock(film.total);
     $('#start-len').textContent = `${Math.max(1, Math.round(film.total / 60))} мин`;
