@@ -77,6 +77,24 @@
     .page { justify-content: flex-start; padding-top: max(56px, calc(env(safe-area-inset-top) + 40px)); }
     .layers b { display: block; margin-bottom: 2px; }
     .play { width: 100%; justify-content: flex-start; }
+    /* на телефоне кнопка «Смотреть демо» — на первом экране, описание — под ней */
+    .actions { order: 1; margin-top: 22px; }
+    .layers { order: 2; margin-top: 26px; }
+    .foot { order: 3; padding-bottom: env(safe-area-inset-bottom); }
+  }
+  @media (max-width: 520px) {
+    .plate { border-radius: 18px; }
+    .plate span:first-of-type { display: none; }   /* точка-разделитель повисала в конце строки */
+  }
+  /* телефон в альбомной ориентации: экран низкий — заголовок компактнее, кнопка остаётся на первом экране */
+  @media (max-height: 520px) and (orientation: landscape) {
+    .page { padding-top: max(18px, env(safe-area-inset-top)); padding-left: max(22px, env(safe-area-inset-left)); padding-right: max(22px, env(safe-area-inset-right)); }
+    .plate { margin-bottom: 12px; }
+    .lock .mark { font-size: 50px; }
+    h1 { font-size: 60px; }
+    .lede { margin-top: 10px; max-width: none; font-size: 19px; }
+    .actions { margin-top: 16px; }
+    .play { width: auto; min-height: 56px; }
   }
 </style>
 </head>
