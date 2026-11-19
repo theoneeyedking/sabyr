@@ -2,7 +2,7 @@
    Медленные аккорды-«подушки» и редкие тихие «колокольчики». Громкость заметно ниже голоса диктора.
    SabyrMusic.start() — плавно включить, .pause() — плавно приглушить, .setEnabled(false) — выключить совсем. */
 window.SabyrMusic = (() => {
-  const LEVEL = 0.12;           // общая громкость: музыка примерно на 20 дБ тише голоса диктора
+  const LEVEL = 0.2;            // общая громкость: музыка примерно на 10–12 дБ тише голоса диктора
   const CHORD = 9;              // секунд на аккорд
   // ре мажор: Dmaj7 – Bm7 – Gmaj7 – A6. Частоты в герцах.
   const CHORDS = [
@@ -20,7 +20,7 @@ window.SabyrMusic = (() => {
     master.connect(ctx.destination);
     const tone = ctx.createBiquadFilter();
     tone.type = 'lowpass';
-    tone.frequency.value = 2200;
+    tone.frequency.value = 3200;
     tone.connect(master);
     // реверберация: затухающий шум вместо записанного зала
     const seconds = 3.2;
@@ -53,13 +53,15 @@ window.SabyrMusic = (() => {
       env.gain.setValueAtTime(peak, at + CHORD - 1);
       env.gain.linearRampToValueAtTime(0, at + CHORD + 3.4);
       env.connect(out);
-      [['sine', 0], ['triangle', 5]].forEach(([type, cents]) => {
+      // третий тон — на октаву выше: маленькие динамики ноутбука и телефона низ почти не воспроизводят
+      [['sine', 0, 1], ['triangle', 5, 1], ['sine', -4, 2]].forEach(([type, cents, octave]) => {
+        if (octave === 2 && n === 0) return;
         const osc = ctx.createOscillator();
         osc.type = type;
-        osc.frequency.value = freq;
+        osc.frequency.value = freq * octave;
         osc.detune.value = cents + (n % 2 ? 3 : -3);
         const part = ctx.createGain();
-        part.gain.value = type === 'sine' ? 1 : 0.35;
+        part.gain.value = octave === 2 ? 0.55 : type === 'sine' ? 1 : 0.35;
         osc.connect(part);
         part.connect(env);
         osc.start(at);
@@ -74,7 +76,7 @@ window.SabyrMusic = (() => {
       const env = ctx.createGain();
       const t = at + offset + (pick % 3) * 0.35;
       env.gain.setValueAtTime(0, t);
-      env.gain.linearRampToValueAtTime(0.05, t + 0.03);
+      env.gain.linearRampToValueAtTime(0.075, t + 0.03);
       env.gain.exponentialRampToValueAtTime(0.0004, t + 3.6);
       osc.connect(env);
       env.connect(out);
