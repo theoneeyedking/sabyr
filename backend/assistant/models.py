@@ -10,3 +10,10 @@ class AssistantMessage(models.Model):
 
     class Meta:
         ordering = ["created_at", "id"]
+
+
+class LLMUsage(models.Model):
+    """Счётчик запросов к LLM за сутки — для суточного лимита (LLM_DAILY_LIMIT)."""
+
+    day = models.DateField(unique=True)
+    calls = models.PositiveIntegerField(default=0)

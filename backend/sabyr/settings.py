@@ -105,5 +105,8 @@ LLM_TIMEOUT_SECONDS = float(os.environ.get("LLM_TIMEOUT_SECONDS", "6"))
 LLM_MAX_RETRIES = int(os.environ.get("LLM_MAX_RETRIES", "1"))
 # Причины риска переформулирует LLM (с проверкой фактов); 0 — только шаблоны
 LLM_REASONS = env_bool("LLM_REASONS", True)
+# Сколько запросов к LLM можно сделать за сутки (0 — без ограничения). Сверх лимита — заготовленные тексты.
+# Нужен на публичном адресе, чтобы посторонние не израсходовали ключ.
+LLM_DAILY_LIMIT = int(os.environ.get("LLM_DAILY_LIMIT", "0"))
 OWN_LLM_URL = os.environ.get("OWN_LLM_URL", "http://llm:8001/v1")
 OWN_LLM_MODEL = os.environ.get("OWN_LLM_MODEL", "sabyr-assistant")

@@ -128,6 +128,32 @@ PROVIDERS = {"anthropic": AnthropicProvider, "api": AnthropicProvider, "own": Ow
 _override: LLMProvider | None = None  # подменяется в тестах
 
 
+class _Metered(LLMProvider):
+    """Обёртка с суточным лимитом: сверх LLM_DAILY_LIMIT запрос не уходит, срабатывают заготовленные тексты."""
+
+    def __init__(self, inner: LLMProvider):
+        self.inner, self.name = inner, inner.name
+
+    def generate(self, system, messages, **kwargs):
+        _spend_daily_quota()
+        return self.inner.generate(system, messages, **kwargs)
+
+
+def _spend_daily_quota() -> None:
+    """Учитывает один запрос к LLM за сегодня; если лимит исчерпан — LLMUnavailable."""
+    from django.db.models import F
+    from django.utils import timezone
+
+    from .models import LLMUsage
+
+    today = timezone.localdate()
+    LLMUsage.objects.get_or_create(day=today)
+    # одно атомарное обновление: два одновременных запроса не превысят лимит
+    spent = LLMUsage.objects.filter(day=today, calls__lt=settings.LLM_DAILY_LIMIT).update(calls=F("calls") + 1)
+    if not spent:
+        raise LLMUnavailable("суточный лимит запросов к LLM исчерпан")
+
+
 def get_provider() -> LLMProvider:
     if _override is not None:
         return _override
@@ -135,7 +161,8 @@ def get_provider() -> LLMProvider:
         cls = PROVIDERS[settings.LLM_PROVIDER]
     except KeyError:
         raise LLMUnavailable(f"неизвестный LLM_PROVIDER={settings.LLM_PROVIDER!r} (ожидается anthropic или own)")
-    return cls()
+    provider = cls()
+    return _Metered(provider) if settings.LLM_DAILY_LIMIT > 0 else provider
 
 
 def set_provider_override(provider: LLMProvider | None) -> None:

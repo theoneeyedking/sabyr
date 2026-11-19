@@ -35,6 +35,8 @@ async function request<T>(cfg: ApiConfig, method: string, path: string, body?: u
   const headers: Record<string, string> = {
     Accept: 'application/json',
     'Accept-Language': acceptLanguage(cfg.lang),
+    // бесплатный туннель ngrok без этого заголовка отдаёт браузеру страницу-предупреждение вместо ответа API
+    'ngrok-skip-browser-warning': '1',
   };
   if (cfg.token) headers.Authorization = `Token ${cfg.token}`;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
