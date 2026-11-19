@@ -285,6 +285,7 @@ body.film:not(.idle) #cap, body.film.film-paused #cap { bottom: 62px; }
 .plbtn.txtbtn { width: auto; padding: 0 12px; color: var(--sub); }
 .plbtn.txtbtn:hover { color: var(--text); }
 #pl-mute[data-state="off"] { color: var(--amber); }
+#pl-music[data-state="off"] { color: var(--faint); text-decoration: line-through; }
 #pl-play[data-state="playing"] .i-play, #pl-play[data-state="paused"] .i-pause { display: none; }
 .pl-time { flex: none; min-width: 36px; font-size: 13px; font-weight: 600; color: var(--sub); font-variant-numeric: tabular-nums; text-align: center; }
 #pl-scrub { flex: 1; height: 28px; display: grid; align-items: center; cursor: pointer; touch-action: none; }
@@ -293,7 +294,7 @@ body.film:not(.idle) #cap, body.film.film-paused #cap { bottom: 62px; }
 #pl-fill { height: 100%; width: 0; background: var(--em); border-radius: 3px; }
 #novoice { position: absolute; left: 50%; top: 14px; translate: -50% 0; margin: 0; padding: 8px 16px; border-radius: 999px;
   background: rgba(5, 11, 20, 0.86); border: 1px solid var(--line); font-size: 13px; color: var(--amber); white-space: nowrap; }
-@media (max-width: 640px) { #pl-slides, #pl-fs { display: none; } }
+@media (max-width: 640px) { #pl-slides, #pl-fs, #pl-music { display: none; } }
 
 /* ---------- окно ведущего ---------- */
 #pres { display: none; }

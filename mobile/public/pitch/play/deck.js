@@ -305,10 +305,12 @@
     $('#pl-play').setAttribute('aria-label', on ? 'Пауза' : 'Смотреть');
     document.body.classList.toggle('film-paused', !on);
   }
-  function play() { setPlaying(true); playStep(film.k); }
-  function pause() { setPlaying(false); silence(); $$('video', slides[i]).forEach((v) => v.pause()); }
+  const music = () => window.SabyrMusic;   // фоновая музыка (music.js); её может не быть в старых браузерах
+  function play() { setPlaying(true); if (!film.muted) music()?.start(); playStep(film.k); }
+  function pause() { setPlaying(false); silence(); music()?.pause(); $$('video', slides[i]).forEach((v) => v.pause()); }
   function finish() {
     setPlaying(false);
+    music()?.pause(4);
     silence();
     film.k = film.seq.length - 1;
     film.stepStart = -1e9;
@@ -369,8 +371,16 @@
       film.muted = !film.muted;
       $('#pl-mute').dataset.state = film.muted ? 'off' : 'on';
       $('#pl-mute').textContent = film.muted ? 'Без звука' : 'Звук';
+      if (film.muted) music()?.pause(0.4); else if (film.playing) music()?.start();
       if (film.playing) playStep(film.k);
     });
+    $('#pl-music').addEventListener('click', () => {
+      const on = !music()?.isEnabled();
+      music()?.setEnabled(on);
+      $('#pl-music').dataset.state = on ? 'on' : 'off';
+      if (on && film.playing && !film.muted) music()?.start();
+    });
+    addEventListener('pagehide', () => music()?.pause(0.1));
     $('#pl-cap').addEventListener('click', toggleCaptions);
     $('#pl-fs').addEventListener('click', fullscreen);
     $('#end-replay').addEventListener('click', begin);
